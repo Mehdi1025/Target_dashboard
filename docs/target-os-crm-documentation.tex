@@ -1,0 +1,607 @@
+\documentclass[11pt,a4paper]{report}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[french]{babel}
+\usepackage{lmodern}
+\usepackage{geometry}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{xcolor}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{enumitem}
+\usepackage{listings}
+\usepackage{tikz}
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+
+\geometry{margin=2.5cm}
+\setlength{\headheight}{14pt}
+\hypersetup{
+  colorlinks=true,
+  linkcolor=blue!60!black,
+  urlcolor=blue!70!black,
+  citecolor=green!50!black
+}
+
+\definecolor{codebg}{RGB}{245,245,250}
+\definecolor{codeframe}{RGB}{200,200,220}
+
+\lstset{
+  backgroundcolor=\color{codebg},
+  frame=single,
+  rulecolor=\color{codeframe},
+  basicstyle=\ttfamily\small,
+  breaklines=true,
+  columns=fullflexible,
+  showstringspaces=false,
+  literate={é}{{\'e}}1 {è}{{\`e}}1 {ê}{{\^e}}1 {à}{{\`a}}1
+           {ù}{{\`u}}1 {ô}{{\^o}}1 {û}{{\^u}}1 {ç}{{\c{c}}}1
+           {É}{{\'E}}1 {è}{{\`e}}1 {à}{{\`a}}1 {—}{---}1
+}
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\textsc{Target OS --- Documentation CRM}}
+\fancyhead[R]{\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+
+\titleformat{\chapter}{\Large\bfseries\color{blue!70!black}}{\thechapter}{1em}{}
+\titleformat{\section}{\large\bfseries}{\thesection}{1em}{}
+\titleformat{\subsection}{\normalsize\bfseries}{\thesubsection}{1em}{}
+
+\begin{document}
+
+% ---------------------------------------------------------------------------
+\title{
+  \vspace{2cm}
+  {\Huge\bfseries Target OS}\\[0.5cm]
+  {\LARGE Documentation technique du CRM}\\[0.3cm]
+  {\large Plateforme de prospection B2B assistée par IA}\\[1.5cm]
+  {\small \today}
+}
+\author{Target OS Dashboard}
+\date{}
+\maketitle
+\thispagestyle{empty}
+\tableofcontents
+\newpage
+
+% ---------------------------------------------------------------------------
+\chapter{Vue d'ensemble}
+
+\section{Présentation du projet}
+
+\textbf{Target OS} est un CRM (Customer Relationship Management) orienté prospection B2B, conçu pour permettre aux \emph{prospecteurs} commerciaux de valider, prioriser et engager des leads identifiés automatiquement par l'intelligence artificielle.
+
+Le système repose sur une architecture \textbf{Next.js} (App Router) côté frontend, avec \textbf{Supabase} comme base de données PostgreSQL hébergée, et des workflows \textbf{n8n} pour l'enrichissement automatique des prospects et la génération de rapports d'audit brand de type \emph{Awwards}.
+
+\section{Objectifs métier}
+
+\begin{itemize}[leftmargin=*]
+  \item Centraliser les prospects générés par l'IA dans un pipeline visualisable.
+  \item Permettre au prospecteur de \textbf{valider}, \textbf{approuver} et \textbf{contacter} chaque lead.
+  \item Générer et partager des \textbf{rapports d'audit brand} personnalisés via un lien public (\texttt{/audit/\{slug\}}).
+  \item Déclencher un chat proactif Tawk.to lorsque le prospect consulte les faiblesses de son entreprise (Mode Sniper).
+  \item Suivre les performances du prospecteur via une section statistiques dédiée.
+  \item Prendre des notes libres sur chaque lead pour le suivi terrain.
+\end{itemize}
+
+\section{Stack technique}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{@{}ll@{}}
+\toprule
+\textbf{Couche} & \textbf{Technologie} \\
+\midrule
+Framework frontend & Next.js 16.3.2 (App Router) \\
+UI & React 19.2.8, Tailwind CSS 4, shadcn/ui \\
+Composants UI & @base-ui/react \\
+Icônes & lucide-react \\
+Langage & TypeScript 5 \\
+Base de données & Supabase (PostgreSQL) \\
+Client BDD & @supabase/supabase-js 2.112.4 \\
+Automatisation & n8n (externe) \\
+Chat live & Tawk.to (embed JavaScript) \\
+Typographie & Plus Jakarta Sans, Geist Mono \\
+\bottomrule
+\end{tabular}
+\caption{Stack technique du projet \texttt{target-os-dashboard}}
+\end{table}
+
+\section{Structure du dépôt}
+
+\begin{lstlisting}
+target-os-dashboard/
+|-- src/
+|   |-- app/                    # Routes Next.js (App Router)
+|   |   |-- page.tsx            # Dashboard pipeline (/)
+|   |   |-- prospecteur/        # Stats prospecteur (/prospecteur)
+|   |   |-- prospects/[id]/     # Fiche prospect interne
+|   |   |-- audit/[slug]/       # Rapport public client
+|   |   `-- api/prospects/      # API REST internes
+|   |-- components/             # Composants React
+|   |-- hooks/                  # Hooks personnalisés
+|   |-- lib/                    # Utilitaires et logique métier
+|   `-- types/                  # Types TypeScript (schéma canonique)
+|-- supabase/                   # Migrations SQL
+|-- n8n/                        # Script n8n pour rapports HTML
+|-- docs/                       # Documentation
+`-- .env.local                  # Variables d'environnement
+\end{lstlisting}
+
+% ---------------------------------------------------------------------------
+\chapter{Modèle de données}
+
+\section{Table \texttt{public.prospects}}
+
+La table \texttt{prospects} est la source de vérité unique du CRM. Toutes les entités métier (lead, entreprise, audit, suivi) sont stockées dans cette table.
+
+\subsection{Schéma complet}
+
+\begin{longtable}{@{}p{3.5cm}p{2cm}p{1.5cm}p{7cm}@{}}
+\toprule
+\textbf{Colonne} & \textbf{Type} & \textbf{Requis} & \textbf{Description} \\
+\midrule
+\endhead
+\texttt{id} & UUID & Oui & Clé primaire (auto-générée) \\
+\texttt{created\_at} & TIMESTAMPTZ & Oui & Date de création (défaut : NOW()) \\
+\texttt{slug} & TEXT & Non & Identifiant URL unique pour le rapport public \\
+\midrule
+\texttt{prenom} & TEXT & Non & Prénom du décisionnaire \\
+\texttt{nom} & TEXT & Non & Nom du décisionnaire \\
+\texttt{email} & TEXT & Oui & Email de contact \\
+\texttt{poste} & TEXT & Non & Fonction / poste occupé \\
+\midrule
+\texttt{entreprise} & TEXT & Oui & Nom de l'entreprise cible \\
+\texttt{url} & TEXT & Non & Site web de l'entreprise \\
+\texttt{secteur} & TEXT & Non & Secteur d'activité \\
+\texttt{taille\_entreprise} & TEXT & Non & Taille (effectifs, etc.) \\
+\texttt{chiffre\_affaires} & TEXT & Non & Chiffre d'affaires estimé \\
+\texttt{annee\_creation} & TEXT & Non & Année de fondation \\
+\midrule
+\texttt{ia\_score} & INTEGER & Non & Score de qualification IA (0--100) \\
+\texttt{analyse\_site} & TEXT & Non & Analyse textuelle du site web \\
+\texttt{forces} & TEXT & Non & Forces identifiées par l'IA \\
+\texttt{faiblesses} & TEXT & Non & Faiblesses / points de rupture \\
+\texttt{proposition\_commerciale} & TEXT & Non & Proposition commerciale générée \\
+\texttt{script\_email} & TEXT & Non & Email de prospection prêt à l'envoi \\
+\texttt{html\_rapport} & TEXT & Non & Rapport HTML brand complet (n8n) \\
+\midrule
+\texttt{statut} & TEXT & Oui & Statut pipeline (défaut : \emph{À valider}) \\
+\texttt{notes} & TEXT & Non & Notes libres du prospecteur \\
+\bottomrule
+\caption{Schéma canonique de la table \texttt{public.prospects}}
+\end{longtable}
+
+\subsection{Index et contraintes}
+
+\begin{itemize}[leftmargin=*]
+  \item \textbf{Index} sur \texttt{statut}, \texttt{ia\_score} (DESC), \texttt{entreprise}.
+  \item \textbf{Index unique partiel} sur \texttt{slug} (WHERE slug IS NOT NULL).
+  \item \textbf{RLS activé} avec policies ouvertes pour \texttt{anon} et \texttt{authenticated} (SELECT, INSERT, UPDATE, DELETE).
+\end{itemize}
+
+\subsection{Valeurs de statut}
+
+Les statuts sont des chaînes libres. Le code applique une logique de filtrage par mots-clés :
+
+\begin{itemize}[leftmargin=*]
+  \item \textbf{À valider} --- contient \texttt{valider} (statut par défaut).
+  \item \textbf{Approuvé / Envoyé} --- contient \texttt{approuv} ou \texttt{envoy}.
+  \item Toute autre valeur est classée dans \emph{Autres}.
+\end{itemize}
+
+\subsection{Constantes TypeScript}
+
+Le fichier \texttt{src/types/database.types.ts} définit les groupes de champs :
+
+\begin{lstlisting}
+PROSPECT_IDENTITY_FIELDS   // prenom, nom, email, poste
+PROSPECT_COMPANY_FIELDS    // entreprise, url, secteur, ...
+PROSPECT_AI_CORE_FIELDS    // ia_score, analyse_site, forces, ...
+PROSPECT_AI_FIELDS         // + html_rapport
+PROSPECT_TRACKING_FIELDS   // statut, notes
+\end{lstlisting}
+
+Et les requêtes SELECT optimisées :
+\begin{itemize}[leftmargin=*]
+  \item \texttt{PROSPECT\_LIST\_SELECT} --- vue liste dashboard (sans \texttt{html\_rapport}).
+  \item \texttt{PROSPECT\_DETAIL\_SELECT} --- fiche prospect (sans \texttt{html\_rapport}, chargé à la demande).
+  \item \texttt{PROSPECT\_REPORT\_SELECT} --- uniquement \texttt{html\_rapport}.
+\end{itemize}
+
+% ---------------------------------------------------------------------------
+\chapter{Routes et pages}
+
+\section{Pages publiques et internes}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{@{}llp{7cm}@{}}
+\toprule
+\textbf{Route} & \textbf{Type} & \textbf{Description} \\
+\midrule
+\texttt{/} & Interne & Dashboard pipeline : KPIs + grille de cartes prospects \\
+\texttt{/prospecteur} & Interne & Section stats du prospecteur \\
+\texttt{/prospects/[id]} & Interne & Fiche détail d'un prospect \\
+\texttt{/audit/[slug]} & Public & Rapport brand / audit client (sans auth) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Toutes les pages de données utilisent \texttt{dynamic = "force-dynamic"} (pas de cache statique).
+
+\subsection{Page Pipeline (\texttt{/})}
+
+\begin{itemize}[leftmargin=*]
+  \item Hero «~Vos prospects, sous contrôle~».
+  \item 4 cartes KPI : total, à valider, approuvés, score moyen IA.
+  \item Grille de cartes (\texttt{ProspectsBoard}) avec recherche textuelle et filtres par statut.
+  \item Chaque carte permet : ouvrir la fiche, copier le lien audit, approuver le lead.
+  \item Tri par \texttt{ia\_score} décroissant.
+\end{itemize}
+
+\subsection{Page Prospecteur (\texttt{/prospecteur})}
+
+Section dédiée dans la sidebar pour les statistiques du commercial :
+
+\begin{itemize}[leftmargin=*]
+  \item Leads chauds (score $\geq$ 75) et froids ($<$ 50).
+  \item Taux d'approbation (\%).
+  \item Nombre de liens clients actifs (prospects avec \texttt{slug}).
+  \item Notes saisies par le prospecteur.
+  \item Activité récente (ajouts semaine / mois).
+  \item Répartition par statut (barres de progression).
+  \item Top 5 prospects par score IA (liens cliquables).
+  \item Nom prospecteur par défaut : \emph{Prospecteur} (placeholder multi-utilisateurs futur).
+\end{itemize}
+
+\subsection{Fiche prospect (\texttt{/prospects/[id]})}
+
+Interface «~Mission Control~» pour un lead individuel :
+
+\paragraph{Hero}
+Initiales entreprise, nom, badges statut/score, pills contact, bandeau meta (taille, site, CA, date).
+
+\paragraph{Onglet Dossier}
+\begin{enumerate}[leftmargin=*]
+  \item \textbf{Notes prospecteur} --- textarea éditable, sauvegarde optimiste via API.
+  \item \textbf{Identité \& entreprise} --- grille bento des champs d'enrichissement.
+  \item \textbf{Audit IA} --- navigation verticale : Analyse, Forces, Faiblesses, Proposition.
+  \item \textbf{Script email} --- bloc terminal dark, copie en un clic.
+\end{enumerate}
+
+\paragraph{Onglet Rapport}
+Iframe embarqué de \texttt{/audit/\{slug\}}, préchargé en arrière-plan pour performance.
+
+\paragraph{Sidebar sticky}
+Score IA avec jauge, actions rapides (copier email, visiter site, audit client), résumé fiche.
+
+\subsection{Audit public (\texttt{/audit/[slug]})}
+
+Page sans chrome dashboard, accessible au client final :
+
+\begin{enumerate}[leftmargin=*]
+  \item Recherche du prospect par \texttt{slug} en base.
+  \item Si slug inconnu $\rightarrow$ 404.
+  \item Si \texttt{html\_rapport} vide $\rightarrow$ page \emph{En attente} (n8n n'a pas encore généré le rapport).
+  \item Si rapport présent $\rightarrow$ rendu HTML via \texttt{dangerouslySetInnerHTML} (scripts strippés).
+  \item Intégration Tawk.to + Mode Sniper (voir chapitre~\ref{ch:sniper}).
+  \item Métadonnées : \texttt{robots: noindex, nofollow}.
+\end{enumerate}
+
+% ---------------------------------------------------------------------------
+\chapter{API REST interne}
+
+Quatre endpoints sous \texttt{/api/prospects/[id]/} :
+
+\begin{longtable}{@{}llp{3cm}p{6cm}@{}}
+\toprule
+\textbf{Méthode} & \textbf{Route} & \textbf{Body} & \textbf{Action} \\
+\midrule
+\endhead
+GET & \path{/report} & --- & Retourne \texttt{html\_rapport} uniquement (lazy load) \\
+PATCH & \path{/statut} & \texttt{\{statut\}} & Met à jour le statut pipeline \\
+PATCH & \path{/notes} & \texttt{\{notes\}} & Sauvegarde notes prospecteur (trim, null si vide) \\
+POST & \path{/slug} & --- & Génère un slug unique depuis le nom entreprise \\
+\bottomrule
+\caption{Endpoints API internes}
+\end{longtable}
+
+Tous utilisent \texttt{createSupabaseClient()} avec la clé anon. Erreurs JSON \texttt{\{ error: string \}}.
+
+\subsection{Génération de slug}
+
+Algorithme dans \texttt{POST /api/prospects/[id]/slug} :
+\begin{enumerate}[leftmargin=*]
+  \item Si slug existant $\rightarrow$ retour immédiat.
+  \item Sinon : \texttt{slugify(entreprise)} (minuscules, tirets, sans accents).
+  \item En cas de collision : suffixe numérique (\texttt{entreprise-2}, \texttt{entreprise-3}, \ldots).
+  \item Fallback : \texttt{entreprise-\{id[0:8]\}}.
+\end{enumerate}
+
+URL publique : \texttt{\{NEXT\_PUBLIC\_APP\_URL\}/audit/\{slug\}}.
+
+% ---------------------------------------------------------------------------
+\chapter{Composants principaux}
+
+\section{Navigation et shell}
+
+\begin{description}[style=nextline, leftmargin=3cm]
+  \item[\texttt{DashboardShell}] Layout global : sidebar 72px, header sticky, mesh gradient background.
+  \item[Sidebar] 3 entrées : Pipeline (/), Prospecteur (/prospecteur), Radar IA (désactivé).
+  \item[Header] Label contextuel selon la route + badge «~Système actif~».
+\end{description}
+
+\section{Pipeline}
+
+\begin{description}[style=nextline, leftmargin=3cm]
+  \item[\texttt{DashboardKpi}] 4 cartes glass avec icônes et dégradés.
+  \item[\texttt{ProspectsBoard}] Recherche + filtres pills + grille responsive.
+  \item[\texttt{ProspectCard}] Carte lead : anneau score SVG, initiales, statut, actions.
+  \item[\texttt{AuditLinkActions}] Génération/copie/prévisualisation lien client (card ou inline).
+\end{description}
+
+\section{Fiche prospect}
+
+\begin{description}[style=nextline, leftmargin=3cm]
+  \item[\texttt{ProspectDetailHero}] Hero éditorial avec grille de fond.
+  \item[\texttt{ProspectDetailIdentity}] Grille bento identité/entreprise.
+  \item[\texttt{ProspectDetailAudit}] Navigation latérale + panneaux colorés par type d'audit.
+  \item[\texttt{ProspectDetailSidebar}] Score, jauge, actions, résumé.
+  \item[\texttt{ProspectNotes}] Notes éditables avec feedback optimiste.
+  \item[\texttt{ProspectScoreRing}] Anneau SVG + badge Lead chaud / Potentiel / À qualifier.
+  \item[\texttt{AuditReportEmbed}] Iframe vers \texttt{/audit/slug} avec prefetch.
+\end{description}
+
+\section{Audit public}
+
+\begin{description}[style=nextline, leftmargin=3cm]
+  \item[\texttt{PublicHtmlReport}] Rendu HTML sécurisé + Tawk + sniper.
+  \item[\texttt{TawkToWidget}] Chargement script embed Tawk.to.
+  \item[\texttt{SniperProactiveBubble}] Bulle message personnalisé post-déclenchement.
+  \item[\texttt{AuditPending}] Page d'attente si rapport non généré.
+\end{description}
+
+\section{Stats prospecteur}
+
+\begin{description}[style=nextline, leftmargin=3cm]
+  \item[\texttt{ProspectorStatsPanel}] Panel complet : KPIs étendus, activité, répartition, top 5.
+\end{description}
+
+% ---------------------------------------------------------------------------
+\chapter{Bibliothèque utilitaire (\texttt{src/lib/})}
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{@{}lp{9cm}@{}}
+\toprule
+\textbf{Fichier} & \textbf{Rôle} \\
+\midrule
+\texttt{supabase.ts} & Factory client Supabase (anon key) \\
+\texttt{get-prospects.ts} & Fetch liste prospects triée par score \\
+\texttt{dashboard-stats.ts} & Calcul KPIs + stats prospecteur \\
+\texttt{prospect-stats.ts} & Stats individuelles prospect (préparé, non branché UI) \\
+\texttt{prospect-utils.ts} & Formatage, badges statut, noms complets \\
+\texttt{slug.ts} & \texttt{slugify()}, \texttt{getPublicAuditUrl()} \\
+\texttt{html-report.ts} & Strip scripts HTML, préparation rendu public \\
+\texttt{sniper-message.ts} & Message sniper + événement CustomEvent \\
+\texttt{utils.ts} & \texttt{cn()} --- merge classes Tailwind \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% ---------------------------------------------------------------------------
+\chapter{Intégration Tawk.to et Mode Sniper}\label{ch:sniper}
+
+\section{Tawk.to}
+
+Widget de chat live intégré uniquement sur les pages d'audit public :
+
+\begin{itemize}[leftmargin=*]
+  \item Script : \texttt{https://embed.tawk.to/\{PROPERTY\_ID\}/\{WIDGET\_ID\}}.
+  \item Variables : \texttt{NEXT\_PUBLIC\_TAWK\_PROPERTY\_ID}, \texttt{NEXT\_PUBLIC\_TAWK\_WIDGET\_ID}.
+  \item Attributs visiteur : nom (prénom ou entreprise) + email.
+  \item API utilisée : \texttt{setAttributes}, \texttt{showWidget}, \texttt{hideWidget}, \texttt{maximize}, \texttt{addEvent}.
+\end{itemize}
+
+\section{Mode Sniper (déclenchement comportemental)}
+
+Hook \texttt{useSmartTawkTrigger} sur la page audit public :
+
+\begin{enumerate}[leftmargin=*]
+  \item \textbf{Observation} --- \texttt{IntersectionObserver} sur la section faiblesses du rapport HTML.
+  \item \textbf{Sélecteurs cibles} --- \texttt{.mini-card.negative}, \texttt{[data-audit-section='faiblesses']}, ou titres contenant «~faiblesse~».
+  \item \textbf{Délai} --- 15 secondes à 60\% de visibilité.
+  \item \textbf{Action} --- ouverture Tawk (\texttt{maximize}) + événement \texttt{target\_os\_sniper\_faiblesses}.
+  \item \textbf{Message} --- \emph{«~Re-bonjour \{Prénom\} ! Tu as vu le point rouge concernant les faiblesses de \{Entreprise\} ? On règle ça quand ?~»}
+  \item \textbf{Bulle UI} --- \texttt{SniperProactiveBubble} affiche le message personnalisé (l'API Tawk ne permet pas d'injecter un message agent côté client).
+\end{enumerate}
+
+Le template HTML n8n inclut \texttt{class="mini-card negative" data-audit-section="faiblesses"} sur la section faiblesses pour servir de cible au trigger.
+
+% ---------------------------------------------------------------------------
+\chapter{Intégration n8n}
+
+\section{Rôle de n8n}
+
+n8n est le moteur d'automatisation externe responsable de :
+
+\begin{enumerate}[leftmargin=*]
+  \item \textbf{Collecte} --- trigger Google Sheets ou autre source de leads.
+  \item \textbf{Enrichissement IA} --- analyse site, forces, faiblesses, proposition, score.
+  \item \textbf{Insertion Supabase} --- création/mise à jour des lignes \texttt{prospects}.
+  \item \textbf{Génération rapport} --- production du HTML brand + slug via script Code node.
+\end{enumerate}
+
+\section{Script \texttt{n8n/generate-brand-report.js}}
+
+Ce script n8n :
+\begin{itemize}[leftmargin=*]
+  \item Parse la réponse JSON de l'IA (\texttt{ia\_score}, \texttt{analyse\_site}, \texttt{forces}, \texttt{faiblesses}, \texttt{proposition\_commerciale}).
+  \item Lit les données Google Sheets (Entreprise, Prénom, Nom, Poste, URL, Secteur).
+  \item Génère un rapport HTML dark style Awwards avec section faiblesses instrumentée pour le Mode Sniper.
+  \item Produit en sortie : \texttt{\{ slug, html\_rapport \}} pour insertion Supabase.
+\end{itemize}
+
+\section{Champs attendus de n8n}
+
+Pour un fonctionnement optimal, n8n doit envoyer à chaque insert/update :
+\begin{itemize}[leftmargin=*]
+  \item Tous les champs identité et entreprise.
+  \item Les champs IA (\texttt{ia\_score}, \texttt{analyse\_site}, \texttt{forces}, \texttt{faiblesses}, \texttt{proposition\_commerciale}, \texttt{script\_email}).
+  \item \texttt{slug} --- identifiant URL unique.
+  \item \texttt{html\_rapport} --- rapport HTML complet.
+\end{itemize}
+
+% ---------------------------------------------------------------------------
+\chapter{Migrations SQL Supabase}
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{@{}lp{9cm}@{}}
+\toprule
+\textbf{Fichier} & \textbf{Description} \\
+\midrule
+\texttt{migration-reset.sql} & Reset complet : DROP + CREATE table + RLS + 3 prospects démo \\
+\texttt{migration-enrichment.sql} & Ajout colonnes enrichissement entreprise et IA \\
+\texttt{migration-html-rapport.sql} & Ajout colonne \texttt{html\_rapport} \\
+\texttt{migration-slug.sql} & Ajout colonne \texttt{slug} + backfill + index unique \\
+\texttt{migration-notes.sql} & Ajout colonne \texttt{notes} \\
+\texttt{migration-cleanup.sql} & Suppression colonnes legacy obsolètes \\
+\texttt{fix-slug-duplicates.sql} & Régénération slugs en cas de doublons \\
+\texttt{backfill-missing-slugs.sql} & Remplissage slugs NULL uniquement \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% ---------------------------------------------------------------------------
+\chapter{Variables d'environnement}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{@{}lp{8cm}@{}}
+\toprule
+\textbf{Variable} & \textbf{Usage} \\
+\midrule
+\texttt{NEXT\_PUBLIC\_SUPABASE\_URL} & URL projet Supabase \\
+\texttt{NEXT\_PUBLIC\_SUPABASE\_ANON\_KEY} & Clé publique Supabase (client) \\
+\texttt{NEXT\_PUBLIC\_TAWK\_PROPERTY\_ID} & ID propriété Tawk.to \\
+\texttt{NEXT\_PUBLIC\_TAWK\_WIDGET\_ID} & ID widget Tawk.to \\
+\texttt{NEXT\_PUBLIC\_APP\_URL} & URL publique pour liens audit (prod) \\
+\texttt{SUPABASE\_SECRET\_KEY} & Clé secrète (présente, non utilisée dans le code actuel) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% ---------------------------------------------------------------------------
+\chapter{Sécurité et authentification}
+
+\section{État actuel}
+
+\begin{itemize}[leftmargin=*]
+  \item \textbf{Pas d'authentification utilisateur} dans l'application Next.js.
+  \item Supabase RLS avec policies ouvertes (\texttt{USING (true)}) pour \texttt{anon} et \texttt{authenticated}.
+  \item Les pages internes (dashboard, fiche prospect) ne sont pas protégées par login.
+  \item Les rapports publics (\texttt{/audit/slug}) sont volontairement accessibles sans auth (partage client).
+  \item Les scripts HTML des rapports sont strippés avant rendu (\texttt{stripScriptsFromHtml}).
+  \item Les rapports publics sont en \texttt{noindex, nofollow}.
+\end{itemize}
+
+\section{Évolutions prévues}
+
+\begin{itemize}[leftmargin=*]
+  \item Profils multi-utilisateurs (prospecteurs avec comptes dédiés).
+  \item Stats filtrées par prospecteur connecté.
+  \item Authentification Supabase Auth ou NextAuth.
+  \item RLS restrictif par utilisateur.
+\end{itemize}
+
+% ---------------------------------------------------------------------------
+\chapter{Design system}
+
+\section{Identité visuelle}
+
+\begin{itemize}[leftmargin=*]
+  \item \textbf{Thème} --- clair premium, inspiré Awwards.
+  \item \textbf{Palette} --- indigo/violet primary, fond off-white (\texttt{oklch}), glass panels.
+  \item \textbf{Typographie} --- Plus Jakarta Sans (UI), Geist Mono (chiffres/scores).
+  \item \textbf{Composants} --- shadcn/ui style \texttt{base-nova}, coins arrondis 0.75--1.75rem.
+  \item \textbf{Effets} --- mesh gradients, backdrop-blur, bento grids, section numbering (01, 02, 03).
+  \item \textbf{Animations} --- transitions 150--200ms, hover lift sur cartes, pulse status badge.
+\end{itemize}
+
+\section{Classes utilitaires CSS}
+
+\begin{lstlisting}
+.dashboard-mesh      // Fond gradient mesh dashboard
+.glass-panel         // Panneau verre (blur + ombre)
+.text-gradient-brand // Titre avec degrade indigo
+.card-hover-lift     // Effet elevation au survol
+.prospect-page-mesh  // Mesh specifique fiche prospect
+.prospect-grid-bg    // Grille de fond decorative
+.section-eyebrow     // Label uppercase tracking
+.bento-shine         // Reflet lumineux bento tiles
+\end{lstlisting}
+
+% ---------------------------------------------------------------------------
+\chapter{Workflow commercial type}
+
+\begin{enumerate}[leftmargin=*]
+  \item \textbf{n8n} insère un prospect enrichi dans Supabase (avec ou sans slug/rapport).
+  \item Le prospect apparaît dans le \textbf{pipeline} (\texttt{/}) trié par score IA.
+  \item Le prospecteur consulte la \textbf{fiche} (\texttt{/prospects/id}), lit l'audit IA, prend des \textbf{notes}.
+  \item Si slug manquant : clic \textbf{Générer le lien client}.
+  \item Le prospecteur \textbf{copie le lien audit} et l'envoie au client (email, WhatsApp, LinkedIn).
+  \item Le client ouvre \textbf{/audit/slug}, consulte son rapport brand.
+  \item En restant 15s sur les faiblesses : \textbf{Mode Sniper} ouvre le chat Tawk.to avec message personnalisé.
+  \item Le prospecteur \textbf{approuve} le lead depuis la carte pipeline.
+  \item Le prospecteur consulte ses \textbf{stats} sur \texttt{/prospecteur}.
+  \item Il copie le \textbf{script email} IA et lance sa prospection.
+\end{enumerate}
+
+% ---------------------------------------------------------------------------
+\chapter{Annexes}
+
+\section{Dépendances npm}
+
+\subsection{Production}
+\texttt{@base-ui/react}, \texttt{@supabase/supabase-js}, \texttt{class-variance-authority}, \texttt{clsx}, \texttt{lucide-react}, \texttt{next}, \texttt{react}, \texttt{react-dom}, \texttt{shadcn}, \texttt{tailwind-merge}, \texttt{tw-animate-css}.
+
+\subsection{Développement}
+\texttt{@tailwindcss/postcss}, \texttt{tailwindcss}, \texttt{typescript}, \texttt{eslint}, \texttt{eslint-config-next}.
+
+\section{Composants non branchés}
+
+\begin{itemize}[leftmargin=*]
+  \item \texttt{prospects-table.tsx} --- vue tableau alternative (remplacée par cartes).
+  \item \texttt{fast-link.tsx} --- navigation avec useTransition (remplacée par Link natif).
+  \item \texttt{html-report-viewer.tsx} --- viewer iframe interne (remplacé par AuditReportEmbed).
+  \item \texttt{prospect-stats.ts} --- calcul stats individuelles (préparé pour usage futur).
+\end{itemize}
+
+\section{Commandes de développement}
+
+\begin{lstlisting}
+cd target-os-dashboard
+npm install
+npm run dev      # http://localhost:3000
+npm run build    # Build production
+npm run start    # Serveur production
+npm run lint     # ESLint
+\end{lstlisting}
+
+\vfill
+\begin{center}
+\small
+\textit{Document généré pour Target OS Dashboard --- \today}\\
+\textit{Version du codebase : Next.js 16.3.2 / React 19.2.8}
+\end{center}
+
+\end{document}
