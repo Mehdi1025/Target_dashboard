@@ -1,4 +1,5 @@
 import { computeDashboardStats, type DashboardStats } from "@/lib/dashboard-stats";
+import { computePipelineFlow, type PipelineFlowStats } from "@/lib/pipeline-flow";
 import type { ProfileRow, ProspectListItem } from "@/types/database.types";
 import { getProfileDisplayName } from "@/lib/profile-utils";
 
@@ -27,6 +28,7 @@ export type AdminFunnelStep = {
 
 export type AdminStatistics = {
   funnel: AdminFunnelStep[];
+  pipelineFlow: PipelineFlowStats;
   scoreMoyen: number | null;
   topScore: number | null;
   leadsChauds: number;
@@ -113,6 +115,12 @@ export function computeAdminStatistics(
 
   const funnel: AdminFunnelStep[] = [
     {
+      key: "ingested",
+      label: "Entrées n8n",
+      value: prospects.length,
+      color: "bg-slate-500",
+    },
+    {
       key: "orphans",
       label: "Orphelins n8n",
       value: orphanCount,
@@ -136,10 +144,27 @@ export function computeAdminStatistics(
       value: overview.approuvesGlobal,
       color: "bg-emerald-500",
     },
+    {
+      key: "rdv_validated",
+      label: "RDV validés",
+      value: assigned.filter((p) => p.rdv_status === "VALIDATED").length,
+      color: "bg-violet-500",
+    },
+    {
+      key: "converted",
+      label: "Convertis",
+      value: assigned.filter(
+        (p) =>
+          p.statut.toLowerCase().includes("converti") ||
+          Number(p.deal_amount ?? 0) > 0
+      ).length,
+      color: "bg-yellow-500",
+    },
   ];
 
   return {
     funnel,
+    pipelineFlow: computePipelineFlow(prospects, orphanCount, overview),
     scoreMoyen:
       scores.length > 0
         ? Math.round(scores.reduce((sum, s) => sum + s, 0) / scores.length)

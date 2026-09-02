@@ -67,11 +67,11 @@ export default async function AdminProspecteurDetailPage({
     <div className="flex flex-col gap-10">
       <div className="flex flex-wrap items-center gap-4">
         <Link
-          href="/admin"
+          href="/admin/equipe"
           className={cn(buttonVariants({ variant: "outline", size: "sm" }), "gap-2")}
         >
           <ArrowLeft className="size-4" />
-          Retour admin
+          Retour équipe
         </Link>
       </div>
 

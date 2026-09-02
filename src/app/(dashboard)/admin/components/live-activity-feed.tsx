@@ -12,6 +12,7 @@ import {
   FileText,
   Link2,
   Mail,
+  Phone,
   Radio,
   StickyNote,
   Zap,
@@ -73,6 +74,7 @@ const ACTION_ICONS: Record<ActionType, LucideIcon> = {
   SAVE_NOTES: StickyNote,
   OPEN_REPORT: FileText,
   SNIPER_ALERT: AlertTriangle,
+  CALL_DISPOSITION: Phone,
 };
 
 function buildProfileLookup(prospecteurs: ProfileRow[]): ProfileLookup {

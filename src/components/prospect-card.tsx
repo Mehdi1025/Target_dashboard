@@ -1,27 +1,35 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
-import { ArrowUpRight, Building2, CalendarCheck, Check, Mail, User } from "lucide-react";
-
-import { declareRDV } from "@/app/actions/rdv-actions";
+import { useEffect, useState } from "react";
+import {
+  ArrowUpRight,
+  Building2,
+  Mail,
+  User,
+} from "lucide-react";
 
 import { AuditLinkActions } from "@/components/audit-link-actions";
+import { ProspectCallActions, type ProspectCallPatch } from "@/components/prospect-call-actions";
 import { Badge } from "@/components/ui/badge";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 import {
   formatValue,
   getFullName,
   getStatutBadgeClass,
 } from "@/lib/prospect-utils";
+import {
+  getRdvBadgeClass,
+  RDV_STATUS_LABELS,
+} from "@/lib/rdv-utils";
 import { cn } from "@/lib/utils";
-import { canDeclareRdvFromStatus, getRdvBadgeClass, RDV_STATUS_LABELS } from "@/lib/rdv-utils";
-import { useTrackActivity } from "@/hooks/use-track-activity";
 import type { ProspectListItem } from "@/types/prospect";
-import type { RdvStatus } from "@/types/database.types";
+import type { RdvRejectionReason, RdvStatus } from "@/types/database.types";
 
 type ProspectCardProps = {
   prospect: ProspectListItem;
+  profileId?: string;
+  onProspectPatch?: (prospectId: string, patch: Partial<ProspectListItem>) => void;
 };
 
 function ScoreRing({ score }: { score: number | null }) {
@@ -71,68 +79,42 @@ function getInitials(entreprise: string) {
     .join("");
 }
 
-export function ProspectCard({ prospect }: ProspectCardProps) {
+export function ProspectCard({ prospect, profileId, onProspectPatch }: ProspectCardProps) {
   const [statut, setStatut] = useState(prospect.statut);
   const [rdvStatus, setRdvStatus] = useState<RdvStatus>(prospect.rdv_status ?? "NONE");
-  const [isApproving, setIsApproving] = useState(false);
-  const [isDeclaringRdv, setIsDeclaringRdv] = useState(false);
-  const [rdvError, setRdvError] = useState<string | null>(null);
-  const { logAction } = useTrackActivity();
-  const isApproved =
-    statut.toLowerCase().includes("approuv") || statut.toLowerCase().includes("envoy");
-  const canDeclareRdv = canDeclareRdvFromStatus(rdvStatus);
+  const [rdvRejectionReason, setRdvRejectionReason] = useState<RdvRejectionReason | null>(
+    prospect.rdv_rejection_reason ?? null
+  );
 
-  async function handleDeclareRdv() {
-    if (!canDeclareRdv || isDeclaringRdv) return;
+  useEffect(() => {
+    setRdvStatus(prospect.rdv_status ?? "NONE");
+  }, [prospect.rdv_status]);
 
-    setIsDeclaringRdv(true);
-    setRdvError(null);
+  useEffect(() => {
+    setRdvRejectionReason(prospect.rdv_rejection_reason ?? null);
+  }, [prospect.rdv_rejection_reason]);
 
-    try {
-      const result = await declareRDV(prospect.id);
-      if (!result.ok) {
-        setRdvError(result.error ?? "Impossible de déclarer le RDV.");
-        return;
-      }
-      setRdvStatus("PENDING");
-    } catch {
-      setRdvError("Erreur réseau.");
-    } finally {
-      setIsDeclaringRdv(false);
+  useEffect(() => {
+    setStatut(prospect.statut);
+  }, [prospect.statut]);
+
+  function handleCallPatch(patch: ProspectCallPatch) {
+    if (patch.statut) {
+      setStatut(patch.statut);
     }
+    if (patch.rdv_status) {
+      setRdvStatus(patch.rdv_status);
+    }
+    if (patch.rdv_rejection_reason !== undefined) {
+      setRdvRejectionReason(patch.rdv_rejection_reason);
+    }
+    onProspectPatch?.(prospect.id, patch);
   }
 
-  async function handleApprove() {
-    if (isApproved || isApproving) return;
-
-    const previousStatut = statut;
-    setStatut("Approuvé");
-    setIsApproving(true);
-
-    try {
-      const response = await fetch(`/api/prospects/${prospect.id}/statut`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ statut: "Approuvé" }),
-      });
-
-      if (!response.ok) {
-        throw new Error("Échec");
-      }
-
-      logAction("APPROVE_LEAD", prospect.id, {
-        entreprise: prospect.entreprise,
-        statut: "Approuvé",
-      });
-    } catch {
-      setStatut(previousStatut);
-    } finally {
-      setIsApproving(false);
-    }
-  }
+  const showCallQualification = rdvStatus === "NONE" && Boolean(profileId);
 
   return (
-    <article className="glass-panel card-hover-lift group flex flex-col rounded-2xl p-5">
+    <article className="glass-panel card-hover-lift group flex h-full flex-col rounded-2xl p-5">
       <div className="flex items-start justify-between gap-4">
         <div className="flex min-w-0 items-start gap-3">
           <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary/15 to-primary/5 text-sm font-bold text-primary">
@@ -166,80 +148,59 @@ export function ProspectCard({ prospect }: ProspectCardProps) {
         </p>
       </div>
 
-      <div className="mt-4 flex flex-wrap items-center justify-between gap-2">
-        <div className="flex flex-wrap items-center gap-2">
+      <div className="mt-4 flex flex-wrap items-center gap-2">
+        <Badge
+          variant="outline"
+          className={cn("rounded-full px-2.5 py-0.5 text-[11px]", getStatutBadgeClass(statut))}
+        >
+          {statut}
+        </Badge>
+        {rdvStatus !== "NONE" ? (
           <Badge
             variant="outline"
-            className={cn("rounded-full px-2.5 py-0.5 text-[11px]", getStatutBadgeClass(statut))}
+            className={cn(
+              "rounded-full px-2.5 py-0.5 text-[11px] font-semibold",
+              getRdvBadgeClass(rdvStatus)
+            )}
           >
-            {statut}
+            RDV · {RDV_STATUS_LABELS[rdvStatus]}
           </Badge>
-          {rdvStatus !== "NONE" ? (
-            <Badge
-              variant="outline"
-              className={cn(
-                "rounded-full px-2.5 py-0.5 text-[11px] font-semibold",
-                getRdvBadgeClass(rdvStatus)
-              )}
-            >
-              RDV · {RDV_STATUS_LABELS[rdvStatus]}
-            </Badge>
-          ) : null}
-        </div>
-        <Link
-          href={`/prospects/${prospect.id}`}
-          prefetch
-          className={cn(
-            buttonVariants({ variant: "ghost", size: "sm" }),
-            "gap-1 text-muted-foreground hover:text-primary"
-          )}
-        >
-          Ouvrir
-          <ArrowUpRight className="size-3.5" />
-        </Link>
+        ) : null}
       </div>
 
-      <div className="mt-4 flex flex-wrap gap-2 border-t border-border/60 pt-4">
+      <div className="mt-auto space-y-3 border-t border-border/60 pt-4">
+        <div className="flex flex-wrap gap-2">
+          <ProspectCallActions
+            prospectId={prospect.id}
+            entreprise={prospect.entreprise}
+            profileId={profileId}
+            rdvStatus={rdvStatus}
+            rdvRejectionReason={rdvRejectionReason}
+            layout="inline"
+            onPatch={handleCallPatch}
+          />
+
+          <Link
+            href={`/prospects/${prospect.id}`}
+            prefetch
+            className={cn(
+              buttonVariants({ variant: "outline", size: "sm" }),
+              "gap-1 text-muted-foreground hover:text-foreground",
+              !showCallQualification && rdvStatus !== "REJECTED" && "ml-auto"
+            )}
+          >
+            Voir la fiche
+            <ArrowUpRight className="size-3.5" />
+          </Link>
+        </div>
+
         <AuditLinkActions
           prospectId={prospect.id}
           entreprise={prospect.entreprise}
           slug={prospect.slug}
           variant="inline"
         />
-        {canDeclareRdv ? (
-          <Button
-            size="sm"
-            variant="outline"
-            className="border-orange-500/40 text-orange-700 hover:bg-orange-500/10"
-            onClick={handleDeclareRdv}
-            loading={isDeclaringRdv}
-            disabled={isDeclaringRdv}
-          >
-            <CalendarCheck className="size-3.5" />
-            Déclarer un RDV
-          </Button>
-        ) : null}
-        <Button
-          size="sm"
-          className="ml-auto shadow-sm shadow-primary/20"
-          onClick={handleApprove}
-          loading={isApproving}
-          disabled={isApproved}
-          variant={isApproved ? "secondary" : "default"}
-        >
-          {isApproved ? (
-            <>
-              <Check className="size-3.5" />
-              Approuvé
-            </>
-          ) : (
-            "Approuver"
-          )}
-        </Button>
       </div>
-      {rdvError ? (
-        <p className="mt-2 text-xs text-destructive">{rdvError}</p>
-      ) : null}
     </article>
   );
 }

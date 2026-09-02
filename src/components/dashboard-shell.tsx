@@ -4,15 +4,21 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   BarChart3,
+  BookOpen,
+  Coins,
   Crosshair,
   LayoutGrid,
   LogOut,
-  Radar,
+  Radio,
   Shield,
+  Users,
+  Zap,
   type LucideIcon,
 } from "lucide-react";
 
 import { signOutAction } from "@/app/actions/admin";
+import { ToastStack } from "@/components/ui/toast-stack";
+import { ToastProvider } from "@/components/toast-provider";
 import { getProfileDisplayName } from "@/lib/profile-utils";
 import { cn } from "@/lib/utils";
 import type { ProfileRow } from "@/types/database.types";
@@ -38,17 +44,22 @@ const PROSPECTEUR_NAV: NavItem[] = [
     isActive: (pathname) => pathname === "/" || pathname.startsWith("/prospects/"),
   },
   {
+    href: "/prospecteur/mission",
+    label: "Mission",
+    icon: Zap,
+    isActive: (pathname) => pathname.startsWith("/prospecteur/mission"),
+  },
+  {
+    href: "/prospecteur/briefing",
+    label: "Briefing",
+    icon: BookOpen,
+    isActive: (pathname) => pathname.startsWith("/prospecteur/briefing"),
+  },
+  {
     href: "/prospecteur",
     label: "Mes stats",
     icon: BarChart3,
     isActive: (pathname) => pathname === "/prospecteur",
-  },
-  {
-    href: "/",
-    label: "Radar IA",
-    icon: Radar,
-    disabled: true,
-    isActive: () => false,
   },
 ];
 
@@ -58,7 +69,20 @@ const ADMIN_NAV: NavItem[] = [
     label: "Administration",
     icon: Shield,
     isActive: (pathname) =>
-      pathname === "/admin" || pathname.startsWith("/admin/prospecteurs"),
+      pathname === "/admin",
+  },
+  {
+    href: "/admin/controle",
+    label: "Contrôle",
+    icon: Radio,
+    isActive: (pathname) => pathname.startsWith("/admin/controle"),
+  },
+  {
+    href: "/admin/equipe",
+    label: "Équipe",
+    icon: Users,
+    isActive: (pathname) =>
+      pathname.startsWith("/admin/equipe") || pathname.startsWith("/admin/prospecteurs"),
   },
   {
     href: "/admin/statistiques",
@@ -66,12 +90,27 @@ const ADMIN_NAV: NavItem[] = [
     icon: BarChart3,
     isActive: (pathname) => pathname.startsWith("/admin/statistiques"),
   },
+  {
+    href: "/admin/finance",
+    label: "Finance",
+    icon: Coins,
+    isActive: (pathname) => pathname.startsWith("/admin/finance"),
+  },
 ];
 
 function getHeaderLabel(pathname: string, isAdmin: boolean) {
   if (isAdmin) {
     if (pathname.startsWith("/admin/statistiques")) {
       return "Admin · Statistiques";
+    }
+    if (pathname.startsWith("/admin/finance")) {
+      return "Admin · Money Command";
+    }
+    if (pathname.startsWith("/admin/controle")) {
+      return "Admin · Tour de Contrôle";
+    }
+    if (pathname.startsWith("/admin/equipe")) {
+      return "Admin · Team Pulse";
     }
     if (pathname.startsWith("/admin/prospecteurs/")) {
       return "Admin · Fiche prospecteur";
@@ -88,7 +127,17 @@ function getHeaderLabel(pathname: string, isAdmin: boolean) {
   const labels: Record<string, string> = {
     "/": "Mission Control · Pipeline",
     "/prospecteur": "Mission Control · Mes stats",
+    "/prospecteur/mission": "Mission Control · Mission Queue",
+    "/prospecteur/briefing": "Mission Control · Salle de Briefing",
   };
+
+  if (pathname.startsWith("/prospecteur/briefing")) {
+    return labels["/prospecteur/briefing"];
+  }
+
+  if (pathname.startsWith("/prospecteur/mission")) {
+    return labels["/prospecteur/mission"];
+  }
 
   return labels[pathname] ?? "Mission Control";
 }
@@ -101,7 +150,8 @@ export function DashboardShell({ children, profile }: DashboardShellProps) {
   const homeHref = isAdmin ? "/admin" : "/";
 
   return (
-    <div className={cn("dashboard-mesh min-h-full", isAdmin && "admin-theme")}>
+    <ToastProvider>
+      <div className={cn("dashboard-mesh min-h-full", isAdmin && "admin-theme")}>
       <div className="mx-auto flex min-h-full w-full max-w-[1600px]">
         <aside
           className={cn(
@@ -282,6 +332,8 @@ export function DashboardShell({ children, profile }: DashboardShellProps) {
           <main className="flex-1 px-5 py-8 lg:px-8 lg:py-10">{children}</main>
         </div>
       </div>
-    </div>
+      </div>
+      <ToastStack />
+    </ToastProvider>
   );
 }

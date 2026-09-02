@@ -3,22 +3,34 @@
 import Link from "next/link";
 import { Copy, ExternalLink, Link2, Mail, Send } from "lucide-react";
 
+import { ProspectCallActions, type ProspectCallPatch } from "@/components/prospect-call-actions";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { ProspectScoreRing } from "@/components/prospect-score-ring";
 import { getFullName, getStatutBadgeClass } from "@/lib/prospect-utils";
 import { cn } from "@/lib/utils";
 import type { ProspectDetailCore } from "@/types/prospect";
+import type { RdvRejectionReason, RdvStatus } from "@/types/database.types";
 
 type ProspectDetailSidebarProps = {
   prospect: ProspectDetailCore;
+  statut: string;
+  rdvStatus: RdvStatus;
+  rdvRejectionReason: RdvRejectionReason | null;
+  profileId?: string;
   onCopyEmail: () => void;
   copied: boolean;
+  onCallPatch: (patch: ProspectCallPatch) => void;
 };
 
 export function ProspectDetailSidebar({
   prospect,
+  statut,
+  rdvStatus,
+  rdvRejectionReason,
+  profileId,
   onCopyEmail,
   copied,
+  onCallPatch,
 }: ProspectDetailSidebarProps) {
   return (
     <aside className="space-y-4 xl:sticky xl:top-24 xl:self-start">
@@ -46,6 +58,16 @@ export function ProspectDetailSidebar({
       <div className="rounded-2xl border border-white/70 bg-white/60 p-5 shadow-sm ring-1 ring-border/30">
         <p className="section-eyebrow">Actions</p>
         <div className="mt-4 space-y-2">
+          <ProspectCallActions
+            prospectId={prospect.id}
+            entreprise={prospect.entreprise}
+            profileId={profileId}
+            rdvStatus={rdvStatus}
+            rdvRejectionReason={rdvRejectionReason}
+            layout="sidebar"
+            onPatch={onCallPatch}
+          />
+
           <Button className="h-10 w-full justify-start gap-3 shadow-md shadow-primary/15" onClick={onCopyEmail} disabled={!prospect.script_email}>
             <span className="flex size-7 items-center justify-center rounded-lg bg-white/20">
               {copied ? <Send className="size-3.5" /> : <Copy className="size-3.5" />}
@@ -90,8 +112,8 @@ export function ProspectDetailSidebar({
           <SummaryItem label="Email" value={prospect.email} icon={Mail} />
           <SummaryItem
             label="Statut"
-            value={prospect.statut}
-            badgeClass={getStatutBadgeClass(prospect.statut)}
+            value={statut}
+            badgeClass={getStatutBadgeClass(statut)}
           />
           {prospect.secteur ? <SummaryItem label="Secteur" value={prospect.secteur} /> : null}
         </dl>

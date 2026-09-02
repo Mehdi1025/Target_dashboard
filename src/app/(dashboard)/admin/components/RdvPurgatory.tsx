@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import {
@@ -14,9 +15,11 @@ import {
 } from "lucide-react";
 
 import { convertDeal, validateRDV } from "@/app/actions/rdv-actions";
+import { RdvRejectDialog } from "@/components/admin/rdv-reject-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { formatEuro } from "@/lib/bounty-stats";
+import { useToast } from "@/hooks/use-toast";
+import { COMMISSION_RATE, formatEuro } from "@/lib/bounty-stats";
 import { getProfileDisplayName } from "@/lib/profile-utils";
 import { getRdvBadgeClass, RDV_STATUS_LABELS } from "@/lib/rdv-utils";
 import { cn } from "@/lib/utils";
@@ -39,8 +42,14 @@ function RdvStatusBadge({ status }: { status: RdvStatus }) {
 }
 
 export function RdvPurgatory({ prospects, prospecteurs }: RdvPurgatoryProps) {
+  const router = useRouter();
+  const { toast } = useToast();
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [closingId, setClosingId] = useState<string | null>(null);
+  const [rejectTarget, setRejectTarget] = useState<{
+    id: string;
+    entreprise: string;
+  } | null>(null);
   const [amounts, setAmounts] = useState<Record<string, string>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isPending, startTransition] = useTransition();
@@ -74,6 +83,8 @@ export function RdvPurgatory({ prospects, prospecteurs }: RdvPurgatoryProps) {
       const result = await validateRDV(prospectId, isApproved);
       if (!result.ok) {
         setErrors((prev) => ({ ...prev, [prospectId]: result.error ?? "Erreur." }));
+      } else {
+        router.refresh();
       }
       setPendingId(null);
     });
@@ -99,7 +110,17 @@ export function RdvPurgatory({ prospects, prospecteurs }: RdvPurgatoryProps) {
       if (!result.ok) {
         setErrors((prev) => ({ ...prev, [prospectId]: result.error ?? "Erreur." }));
       } else {
+        const commission = Math.round(amount * COMMISSION_RATE * 100) / 100;
+        const entreprise =
+          prospects.find((p) => p.id === prospectId)?.entreprise ?? "Lead";
         setAmounts((prev) => ({ ...prev, [prospectId]: "" }));
+        toast({
+          variant: "success",
+          title: "Deal closé",
+          description: `${entreprise} — ${formatEuro(commission)} crédités au prospecteur.`,
+          duration: 7000,
+        });
+        router.refresh();
       }
       setClosingId(null);
     });
@@ -107,6 +128,24 @@ export function RdvPurgatory({ prospects, prospecteurs }: RdvPurgatoryProps) {
 
   return (
     <div className="space-y-8">
+      <RdvRejectDialog
+        open={rejectTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) setRejectTarget(null);
+        }}
+        prospectId={rejectTarget?.id ?? null}
+        entreprise={rejectTarget?.entreprise}
+        onSuccess={() => {
+          setRejectTarget(null);
+          router.refresh();
+        }}
+        onError={(message) => {
+          if (rejectTarget) {
+            setErrors((prev) => ({ ...prev, [rejectTarget.id]: message }));
+          }
+        }}
+      />
+
       <section className="space-y-4">
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
@@ -192,7 +231,12 @@ export function RdvPurgatory({ prospects, prospecteurs }: RdvPurgatoryProps) {
                                 variant="destructive"
                                 loading={rowPending}
                                 disabled={rowPending}
-                                onClick={() => handleValidate(prospect.id, false)}
+                                onClick={() =>
+                                  setRejectTarget({
+                                    id: prospect.id,
+                                    entreprise: prospect.entreprise,
+                                  })
+                                }
                               >
                                 <Ban className="size-3.5" />
                                 REJETER (Hors Critères)
@@ -222,7 +266,8 @@ export function RdvPurgatory({ prospects, prospecteurs }: RdvPurgatoryProps) {
             </p>
             <h2 className="mt-1 text-xl font-bold tracking-tight">RDVs validés à convertir</h2>
             <p className="mt-1 text-sm text-muted-foreground">
-              Saisissez le montant du contrat pour calculer la commission 10%.
+              Étape 2 — saisissez le montant du contrat, puis cliquez « Marquer comme closé ».
+              La commission 10% est créditée automatiquement au prospecteur.
             </p>
           </div>
           <Badge
@@ -284,7 +329,7 @@ export function RdvPurgatory({ prospects, prospecteurs }: RdvPurgatoryProps) {
                               type="number"
                               min="0"
                               step="0.01"
-                              placeholder="Ex: 5000"
+                              placeholder="Montant contrat"
                               value={amounts[prospect.id] ?? ""}
                               onChange={(event) =>
                                 setAmounts((prev) => ({

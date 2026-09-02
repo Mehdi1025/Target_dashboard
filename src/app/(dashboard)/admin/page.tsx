@@ -1,13 +1,20 @@
 import { redirect } from "next/navigation";
 
 import { AdminKpiPanel } from "@/components/admin/admin-kpi-panel";
+import { OracleAdminPanel } from "@/components/admin/oracle-admin-panel";
 import { LiveActivityFeed } from "@/app/(dashboard)/admin/components/live-activity-feed";
-import { RdvPurgatory } from "@/app/(dashboard)/admin/components/RdvPurgatory";
+import { RdvPurgatorySection } from "@/app/(dashboard)/admin/components/rdv-purgatory-section";
 import { OrphanLeadsTable } from "@/components/admin/orphan-leads-table";
 import { ProspecteursManagementTable } from "@/components/admin/prospecteurs-management-table";
 import { getCurrentProfile } from "@/lib/auth";
 import { computeAdminOverview } from "@/lib/admin-stats";
+import { computeOracleAdmin } from "@/lib/oracle-admin";
+import { getTodayCallDispositionEvents } from "@/lib/get-prospector-activity-snapshot";
 import { getOrphanProspects } from "@/lib/get-orphan-prospects";
+import {
+  countPendingRdvTomorrow,
+  getAdminRdvCalendar,
+} from "@/lib/get-admin-calendar";
 import { getProspecteurs } from "@/lib/get-prospecteurs";
 import { getProspects } from "@/lib/get-prospects";
 
@@ -24,10 +31,33 @@ export default async function AdminPage() {
     { prospects, error: prospectsError },
     { prospecteurs, error: prospecteursError },
     { orphans, error: orphansError },
-  ] = await Promise.all([getProspects(), getProspecteurs(), getOrphanProspects()]);
+    rdvCalendar,
+    { events: todayCallDispositions, error: callDispositionsError },
+  ] = await Promise.all([
+    getProspects(),
+    getProspecteurs(),
+    getOrphanProspects(),
+    getAdminRdvCalendar(),
+    getTodayCallDispositionEvents(),
+  ]);
 
-  const error = prospectsError ?? prospecteursError ?? orphansError;
+  const error =
+    prospectsError ?? prospecteursError ?? orphansError ?? callDispositionsError;
   const overview = computeAdminOverview(prospecteurs, prospects, orphans.length);
+  const oracle = computeOracleAdmin(
+    prospecteurs,
+    prospects,
+    orphans,
+    todayCallDispositions
+  );
+  const pendingTomorrowCount = countPendingRdvTomorrow(rdvCalendar.items);
+  const calendarView = {
+    overdue: rdvCalendar.overdue,
+    overdueLabel: rdvCalendar.overdueLabel,
+    days: rdvCalendar.days,
+    totalCount: rdvCalendar.totalCount,
+    error: rdvCalendar.error,
+  };
 
   return (
     <div className="flex flex-col gap-10">
@@ -56,10 +86,16 @@ export default async function AdminPage() {
         </div>
       ) : (
         <>
+          <OracleAdminPanel snapshot={oracle} />
           <AdminKpiPanel overview={overview} />
 
-          <section className="space-y-4">
-            <RdvPurgatory prospects={prospects} prospecteurs={prospecteurs} />
+          <section id="purgatoire" className="scroll-mt-24">
+            <RdvPurgatorySection
+              prospects={prospects}
+              prospecteurs={prospecteurs}
+              calendar={calendarView}
+              pendingTomorrowCount={pendingTomorrowCount}
+            />
           </section>
 
           <section className="space-y-4">
@@ -88,7 +124,7 @@ export default async function AdminPage() {
             <ProspecteursManagementTable rows={overview.prospecteurRows} />
           </section>
 
-          <section className="space-y-4">
+          <section id="orphelins" className="space-y-4 scroll-mt-24">
             <div>
               <h2 className="text-xl font-bold tracking-tight">
                 Distribution des leads orphelins

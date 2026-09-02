@@ -15,11 +15,15 @@ import {
 import { ProspectScoreBadge, ProspectScoreRing } from "@/components/prospect-score-ring";
 import { Badge } from "@/components/ui/badge";
 import { getFullName, getStatutBadgeClass } from "@/lib/prospect-utils";
+import { getRdvBadgeClass, RDV_STATUS_LABELS } from "@/lib/rdv-utils";
 import { cn } from "@/lib/utils";
 import type { ProspectDetailCore } from "@/types/prospect";
+import type { RdvStatus } from "@/types/database.types";
 
 type ProspectDetailHeroProps = {
   prospect: ProspectDetailCore;
+  statut: string;
+  rdvStatus: RdvStatus;
 };
 
 function getInitials(entreprise: string) {
@@ -38,7 +42,7 @@ function formatDate(iso: string) {
   }).format(new Date(iso));
 }
 
-export function ProspectDetailHero({ prospect }: ProspectDetailHeroProps) {
+export function ProspectDetailHero({ prospect, statut, rdvStatus }: ProspectDetailHeroProps) {
   const fullName = getFullName(prospect.prenom, prospect.nom);
 
   return (
@@ -83,11 +87,22 @@ export function ProspectDetailHero({ prospect }: ProspectDetailHeroProps) {
                   variant="outline"
                   className={cn(
                     "rounded-full border px-3 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
-                    getStatutBadgeClass(prospect.statut)
+                    getStatutBadgeClass(statut)
                   )}
                 >
-                  {prospect.statut}
+                  {statut}
                 </Badge>
+                {rdvStatus !== "NONE" ? (
+                  <Badge
+                    variant="outline"
+                    className={cn(
+                      "rounded-full border px-3 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
+                      getRdvBadgeClass(rdvStatus)
+                    )}
+                  >
+                    RDV · {RDV_STATUS_LABELS[rdvStatus]}
+                  </Badge>
+                ) : null}
                 {prospect.ia_score !== null ? (
                   <ProspectScoreBadge score={prospect.ia_score} />
                 ) : null}

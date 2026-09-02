@@ -1,10 +1,7 @@
 import { redirect } from "next/navigation";
 
-import { BountyTracker } from "@/app/(dashboard)/prospecteur/components/BountyTracker";
-import { DashboardKpi } from "@/components/dashboard-kpi";
-import { ProspectsBoard } from "@/components/prospects-board";
+import { ProspectorPipeline } from "@/components/prospector-pipeline";
 import { getCurrentProfile } from "@/lib/auth";
-import { computeDashboardStats } from "@/lib/dashboard-stats";
 import { getProspects } from "@/lib/get-prospects";
 
 export const dynamic = "force-dynamic";
@@ -17,7 +14,6 @@ export default async function DashboardPage() {
   }
 
   const { prospects, error } = await getProspects();
-  const stats = computeDashboardStats(prospects);
 
   return (
     <div className="flex flex-col gap-10">
@@ -43,23 +39,9 @@ export default async function DashboardPage() {
           <p className="font-semibold">Erreur de connexion Supabase</p>
           <p className="mt-1 text-destructive/80">{error}</p>
         </div>
-      ) : (
-        <>
-          <BountyTracker prospects={prospects} />
-          <DashboardKpi stats={stats} />
-          <section className="space-y-5">
-            <div className="flex items-end justify-between gap-4">
-              <div>
-                <h2 className="text-xl font-bold tracking-tight">Pipeline actif</h2>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  {stats.total} prospect{stats.total > 1 ? "s" : ""} · triés par score IA
-                </p>
-              </div>
-            </div>
-            <ProspectsBoard prospects={prospects} />
-          </section>
-        </>
-      )}
+      ) : profile ? (
+        <ProspectorPipeline prospects={prospects} profileId={profile.id} />
+      ) : null}
     </div>
   );
 }

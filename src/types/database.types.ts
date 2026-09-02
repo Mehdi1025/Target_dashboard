@@ -15,6 +15,37 @@ export const RDV_STATUSES = [
   "REJECTED",
 ] as const satisfies readonly RdvStatus[];
 
+/** Motif admin lors du rejet d'un RDV déclaré */
+export type RdvRejectionReason = "INJOIGNABLE" | "PAS_INTERESSE" | "FAUX_NUMERO";
+
+export const RDV_REJECTION_REASONS = [
+  "INJOIGNABLE",
+  "PAS_INTERESSE",
+  "FAUX_NUMERO",
+] as const satisfies readonly RdvRejectionReason[];
+
+export const RDV_REJECTION_REASON_LABELS: Record<RdvRejectionReason, string> = {
+  INJOIGNABLE: "Injoignable",
+  PAS_INTERESSE: "Pas intéressé",
+  FAUX_NUMERO: "Faux numéro",
+};
+
+/** Issue d'appel téléphonique — mise à jour du statut pipeline */
+export type CallDisposition = "NRP" | "ECHANGE" | "REFUS";
+
+export const CALL_DISPOSITIONS = [
+  "NRP",
+  "ECHANGE",
+  "REFUS",
+] as const satisfies readonly CallDisposition[];
+
+/** Libellés persistés dans prospects.statut */
+export const CALL_DISPOSITION_STATUTS: Record<CallDisposition, string> = {
+  NRP: "NRP",
+  ECHANGE: "Échange",
+  REFUS: "Refus",
+};
+
 /** Actions tracées dans l'ECG Commercial */
 export type ActionType =
   | "VIEW_LEAD"
@@ -24,7 +55,8 @@ export type ActionType =
   | "APPROVE_LEAD"
   | "SAVE_NOTES"
   | "OPEN_REPORT"
-  | "SNIPER_ALERT";
+  | "SNIPER_ALERT"
+  | "CALL_DISPOSITION";
 
 export const ACTION_TYPES = [
   "VIEW_LEAD",
@@ -35,6 +67,7 @@ export const ACTION_TYPES = [
   "SAVE_NOTES",
   "OPEN_REPORT",
   "SNIPER_ALERT",
+  "CALL_DISPOSITION",
 ] as const satisfies readonly ActionType[];
 
 export type Json =
@@ -129,6 +162,7 @@ export type Database = {
           notes: string | null;
           rdv_status: RdvStatus;
           rdv_date: string | null;
+          rdv_rejection_reason: RdvRejectionReason | null;
           deal_amount: number;
           commission_earned: number;
         };
@@ -158,6 +192,7 @@ export type Database = {
           notes?: string | null;
           rdv_status?: RdvStatus;
           rdv_date?: string | null;
+          rdv_rejection_reason?: RdvRejectionReason | null;
           deal_amount?: number;
           commission_earned?: number;
         };
@@ -187,6 +222,7 @@ export type Database = {
           notes?: string | null;
           rdv_status?: RdvStatus;
           rdv_date?: string | null;
+          rdv_rejection_reason?: RdvRejectionReason | null;
           deal_amount?: number;
           commission_earned?: number;
         };
@@ -220,14 +256,18 @@ export const PROSPECT_AI_FIELDS =
 export const PROSPECT_TRACKING_FIELDS = "statut, notes, assigned_to" as const;
 
 export const PROSPECT_RDV_FIELDS =
-  "rdv_status, rdv_date, deal_amount, commission_earned" as const;
+  "rdv_status, rdv_date, rdv_rejection_reason, deal_amount, commission_earned" as const;
 
 export const PROSPECT_LIST_SELECT =
   `id, slug, created_at, assigned_to, ${PROSPECT_IDENTITY_FIELDS}, entreprise, ia_score, statut, notes, ${PROSPECT_RDV_FIELDS}`;
 
 /** Chargement initial fiche prospect — sans html_rapport (lazy) */
 export const PROSPECT_DETAIL_SELECT =
-  `id, slug, created_at, assigned_to, ${PROSPECT_IDENTITY_FIELDS}, ${PROSPECT_COMPANY_FIELDS}, ${PROSPECT_AI_CORE_FIELDS}, statut, notes`;
+  `id, slug, created_at, assigned_to, ${PROSPECT_IDENTITY_FIELDS}, ${PROSPECT_COMPANY_FIELDS}, ${PROSPECT_AI_CORE_FIELDS}, statut, notes, ${PROSPECT_RDV_FIELDS}`;
+
+/** Données pour la Salle de Briefing (sans html_rapport) */
+export const PROSPECT_BRIEFING_SELECT =
+  `id, slug, created_at, assigned_to, ${PROSPECT_IDENTITY_FIELDS}, entreprise, url, secteur, ia_score, analyse_site, forces, faiblesses, proposition_commerciale, script_email, statut, notes, ${PROSPECT_RDV_FIELDS}`;
 
 export const PROSPECT_REPORT_SELECT = "html_rapport" as const;
 
@@ -247,6 +287,7 @@ export type ProspectListItem = Pick<
   | "notes"
   | "rdv_status"
   | "rdv_date"
+  | "rdv_rejection_reason"
   | "deal_amount"
   | "commission_earned"
 >;
@@ -254,6 +295,34 @@ export type ProspectListItem = Pick<
 export type ProspectDetail = ProspectRow;
 
 export type ProspectDetailCore = Omit<ProspectRow, "html_rapport">;
+
+export type BriefingProspect = Pick<
+  ProspectRow,
+  | "id"
+  | "slug"
+  | "created_at"
+  | "assigned_to"
+  | "prenom"
+  | "nom"
+  | "email"
+  | "poste"
+  | "entreprise"
+  | "url"
+  | "secteur"
+  | "ia_score"
+  | "analyse_site"
+  | "forces"
+  | "faiblesses"
+  | "proposition_commerciale"
+  | "script_email"
+  | "statut"
+  | "notes"
+  | "rdv_status"
+  | "rdv_date"
+  | "rdv_rejection_reason"
+  | "deal_amount"
+  | "commission_earned"
+>;
 
 export type OrphanProspectItem = Pick<
   ProspectRow,

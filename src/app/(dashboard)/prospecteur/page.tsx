@@ -1,13 +1,9 @@
 import { redirect } from "next/navigation";
 
-import { BountyTracker } from "@/app/(dashboard)/prospecteur/components/BountyTracker";
-import { ProspectorStatsPanel } from "@/components/prospector-stats-panel";
-import { DashboardKpi } from "@/components/dashboard-kpi";
+import { ProspectorPerformanceView } from "@/components/prospector-performance-view";
 import { getCurrentProfile } from "@/lib/auth";
 import { getProfileDisplayName } from "@/lib/profile-utils";
-import { computeDashboardStats, computeProspectorStats } from "@/lib/dashboard-stats";
 import { getProspects } from "@/lib/get-prospects";
-
 export const dynamic = "force-dynamic";
 
 export default async function ProspecteurPage() {
@@ -18,11 +14,7 @@ export default async function ProspecteurPage() {
   }
 
   const { prospects, error } = await getProspects();
-  const stats = computeDashboardStats(prospects);
-  const prospectorStats = computeProspectorStats(
-    prospects,
-    profile ? getProfileDisplayName(profile) : "Prospecteur"
-  );
+  const prospectorName = profile ? getProfileDisplayName(profile) : "Prospecteur";
 
   return (
     <div className="flex flex-col gap-10">
@@ -46,13 +38,13 @@ export default async function ProspecteurPage() {
           <p className="font-semibold">Erreur de connexion Supabase</p>
           <p className="mt-1 text-destructive/80">{error}</p>
         </div>
-      ) : (
-        <>
-          <BountyTracker prospects={prospects} />
-          <DashboardKpi stats={stats} />
-          <ProspectorStatsPanel stats={prospectorStats} />
-        </>
-      )}
+      ) : profile ? (
+        <ProspectorPerformanceView
+          initialProspects={prospects}
+          profileId={profile.id}
+          prospectorName={prospectorName}
+        />
+      ) : null}
     </div>
   );
 }

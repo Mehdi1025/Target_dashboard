@@ -9,6 +9,8 @@ import type { ProspectListItem } from "@/types/prospect";
 
 type ProspectsBoardProps = {
   prospects: ProspectListItem[];
+  profileId?: string;
+  onProspectPatch?: (prospectId: string, patch: Partial<ProspectListItem>) => void;
 };
 
 type FilterKey = "all" | "valider" | "approuve" | "autre";
@@ -31,7 +33,7 @@ function matchesFilter(prospect: ProspectListItem, filter: FilterKey) {
   return !statut.includes("valider") && !statut.includes("approuv") && !statut.includes("envoy");
 }
 
-export function ProspectsBoard({ prospects }: ProspectsBoardProps) {
+export function ProspectsBoard({ prospects, profileId, onProspectPatch }: ProspectsBoardProps) {
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<FilterKey>("all");
 
@@ -119,7 +121,12 @@ export function ProspectsBoard({ prospects }: ProspectsBoardProps) {
       ) : (
         <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
           {filtered.map((prospect) => (
-            <ProspectCard key={prospect.id} prospect={prospect} />
+            <ProspectCard
+              key={prospect.id}
+              prospect={prospect}
+              profileId={profileId}
+              onProspectPatch={onProspectPatch}
+            />
           ))}
         </div>
       )}

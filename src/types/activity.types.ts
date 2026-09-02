@@ -1,4 +1,4 @@
-import type { ActionType } from "@/types/database.types";
+import type { ActionType, CallDisposition } from "@/types/database.types";
 import type { Json } from "@/types/database.types";
 
 export type { ActionType };
@@ -15,6 +15,7 @@ export const PROSPECT_ACTION_TYPES = [
   "SAVE_NOTES",
   "OPEN_REPORT",
   "SNIPER_ALERT",
+  "CALL_DISPOSITION",
 ] as const satisfies readonly ActionType[];
 
 export type ActivityMetadata = {
@@ -22,6 +23,7 @@ export type ActivityMetadata = {
   email_type?: string;
   slug?: string;
   statut?: string;
+  disposition?: CallDisposition;
   notes_length?: number;
   source?: string;
   [key: string]: Json | undefined;
@@ -63,6 +65,7 @@ export function getActionLabel(actionType: string): string {
     SAVE_NOTES: "Enregistrement notes",
     OPEN_REPORT: "Ouverture rapport brand",
     SNIPER_ALERT: "Alerte sniper (faiblesses)",
+    CALL_DISPOSITION: "Issue d'appel téléphonique",
   };
 
   if (isActionType(actionType)) {
@@ -112,6 +115,12 @@ export function getActionVisual(actionType: string): ActionVisualConfig {
         dotClass: "bg-violet-400 shadow-[0_0_12px_rgba(167,139,250,0.55)]",
         badgeClass: "border-violet-400/30 bg-violet-500/10 text-violet-300",
         ringClass: "ring-violet-500/30",
+      };
+    case "CALL_DISPOSITION":
+      return {
+        dotClass: "bg-cyan-400 shadow-[0_0_14px_rgba(34,211,238,0.65)]",
+        badgeClass: "border-cyan-400/30 bg-cyan-500/10 text-cyan-300",
+        ringClass: "ring-cyan-500/30",
       };
     default:
       return {

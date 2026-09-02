@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Copy, FileText, LayoutGrid, Sparkles } from "lucide-react";
 
 import { AuditLinkActions } from "@/components/audit-link-actions";
+import { type ProspectCallPatch } from "@/components/prospect-call-actions";
 import { ProspectDetailHero } from "@/components/prospect-detail-hero";
 import {
   ProspectDetailAudit,
@@ -18,14 +19,46 @@ import { useTrackActivity } from "@/hooks/use-track-activity";
 import { formatValue } from "@/lib/prospect-utils";
 import { cn } from "@/lib/utils";
 import type { ProspectDetailCore } from "@/types/prospect";
+import type { RdvRejectionReason, RdvStatus } from "@/types/database.types";
+
 type ProspectDetailViewProps = {
   prospect: ProspectDetailCore;
+  profileId?: string;
 };
 
-export function ProspectDetailView({ prospect }: ProspectDetailViewProps) {
+export function ProspectDetailView({ prospect, profileId }: ProspectDetailViewProps) {
   const [copied, setCopied] = useState(false);
   const [activeTab, setActiveTab] = useState("overview");
+  const [statut, setStatut] = useState(prospect.statut);
+  const [rdvStatus, setRdvStatus] = useState<RdvStatus>(prospect.rdv_status ?? "NONE");
+  const [rdvRejectionReason, setRdvRejectionReason] = useState<RdvRejectionReason | null>(
+    prospect.rdv_rejection_reason ?? null
+  );
   const { logAction } = useTrackActivity();
+
+  useEffect(() => {
+    setStatut(prospect.statut);
+  }, [prospect.statut]);
+
+  useEffect(() => {
+    setRdvStatus(prospect.rdv_status ?? "NONE");
+  }, [prospect.rdv_status]);
+
+  useEffect(() => {
+    setRdvRejectionReason(prospect.rdv_rejection_reason ?? null);
+  }, [prospect.rdv_rejection_reason]);
+
+  function handleCallPatch(patch: ProspectCallPatch) {
+    if (patch.statut) {
+      setStatut(patch.statut);
+    }
+    if (patch.rdv_status) {
+      setRdvStatus(patch.rdv_status);
+    }
+    if (patch.rdv_rejection_reason !== undefined) {
+      setRdvRejectionReason(patch.rdv_rejection_reason);
+    }
+  }
 
   useEffect(() => {
     logAction(
@@ -59,7 +92,7 @@ export function ProspectDetailView({ prospect }: ProspectDetailViewProps) {
 
   return (
     <div className="mx-auto flex max-w-[1400px] flex-col gap-8 lg:gap-12">
-        <ProspectDetailHero prospect={prospect} />
+        <ProspectDetailHero prospect={prospect} statut={statut} rdvStatus={rdvStatus} />
 
         <div className="grid gap-8 xl:grid-cols-[1fr_300px] xl:gap-10">
           <div className="min-w-0 space-y-8">
@@ -166,8 +199,13 @@ export function ProspectDetailView({ prospect }: ProspectDetailViewProps) {
 
           <ProspectDetailSidebar
             prospect={prospect}
+            statut={statut}
+            rdvStatus={rdvStatus}
+            rdvRejectionReason={rdvRejectionReason}
+            profileId={profileId}
             onCopyEmail={handleCopyEmail}
             copied={copied}
+            onCallPatch={handleCallPatch}
           />
         </div>
       </div>

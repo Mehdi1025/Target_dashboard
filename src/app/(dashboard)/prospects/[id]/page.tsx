@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 
 import { ProspectDetailView } from "@/components/prospect-detail";
+import { getCurrentProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { PROSPECT_DETAIL_SELECT, type ProspectDetailCore } from "@/types/prospect";
 
@@ -37,7 +38,7 @@ async function getProspect(id: string) {
 
 export default async function ProspectPage({ params }: ProspectPageProps) {
   const { id } = await params;
-  const { prospect, error } = await getProspect(id);
+  const [{ prospect, error }, profile] = await Promise.all([getProspect(id), getCurrentProfile()]);
 
   if (error?.includes("introuvable") || (!prospect && !error)) {
     notFound();
@@ -52,5 +53,10 @@ export default async function ProspectPage({ params }: ProspectPageProps) {
     );
   }
 
-  return <ProspectDetailView prospect={prospect} />;
+  const profileId =
+    profile?.role === "prospecteur" && prospect.assigned_to === profile.id
+      ? profile.id
+      : undefined;
+
+  return <ProspectDetailView prospect={prospect} profileId={profileId} />;
 }

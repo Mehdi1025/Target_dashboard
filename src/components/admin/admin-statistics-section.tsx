@@ -12,6 +12,7 @@ import {
 
 import type { AdminStatistics } from "@/lib/admin-stats";
 import { cn } from "@/lib/utils";
+import { PipelineFlowChart } from "@/components/admin/pipeline-flow-chart";
 
 type AdminStatisticsSectionProps = {
   statistics: AdminStatistics;
@@ -157,7 +158,10 @@ function MiniStat({
 
 export function AdminStatisticsSection({ statistics }: AdminStatisticsSectionProps) {
   return (
-    <section className="space-y-5">
+    <section className="space-y-8">
+      <PipelineFlowChart flow={statistics.pipelineFlow} />
+
+      <div className="space-y-5">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h2 className="text-xl font-bold tracking-tight">Vue analytique</h2>
@@ -181,8 +185,8 @@ export function AdminStatisticsSection({ statistics }: AdminStatisticsSectionPro
               <Target className="size-5" />
             </div>
             <div>
-              <h3 className="font-bold">Entonnoir pipeline</h3>
-              <p className="text-xs text-muted-foreground">De n8n à l&apos;approbation</p>
+              <h3 className="font-bold">Entonnoir détaillé</h3>
+              <p className="text-xs text-muted-foreground">n8n → RDV → conversion</p>
             </div>
           </div>
           <FunnelChart funnel={statistics.funnel} />
@@ -327,6 +331,7 @@ export function AdminStatisticsSection({ statistics }: AdminStatisticsSectionPro
             </ol>
           )}
         </div>
+      </div>
       </div>
     </section>
   );
