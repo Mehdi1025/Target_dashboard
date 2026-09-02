@@ -1,12 +1,16 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { isValid, parseISO, set } from "date-fns";
+import { addMinutes, isValid, parseISO, set } from "date-fns";
 
 import { trackActivity } from "@/app/actions/track-activity";
-import { getCurrentProfile } from "@/lib/auth";
+import { validateRdvSlot } from "@/app/actions/rdv-availability-actions";
+import { getCurrentProfile, getProfileDisplayName } from "@/lib/auth";
 import { COMMISSION_RATE } from "@/lib/bounty-stats";
+import { createRdvCalendarEvent } from "@/lib/google-calendar";
+import { getRdvCalendarSettingsInternal } from "@/lib/rdv-calendar-settings";
 import { isRdvRejectionReason } from "@/lib/rdv-rejection-reasons";
+import { getFullName } from "@/lib/prospect-utils";
 import { createClient } from "@/lib/supabase/server";
 import type { CallDisposition, RdvRejectionReason, RdvStatus } from "@/types/database.types";
 import { CALL_DISPOSITIONS, CALL_DISPOSITION_STATUTS } from "@/types/database.types";
@@ -27,6 +31,7 @@ function revalidateProspectPaths() {
   revalidatePath("/prospecteur/briefing");
   revalidatePath("/admin");
   revalidatePath("/admin/finance");
+  revalidatePath("/admin/creneaux");
 }
 
 async function getProspectForAction(prospectId: string) {
@@ -44,15 +49,42 @@ async function getProspectForAction(prospectId: string) {
   return { prospect: data, supabase, error: null };
 }
 
-/** Prospecteur — déclare un RDV (passage en validation admin) */
-export async function declareRDV(prospectId: string): Promise<RdvActionResult> {
+async function getProspectForRdvBooking(prospectId: string) {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("prospects")
+    .select("id, assigned_to, rdv_status, statut, entreprise, prenom, nom, email")
+    .eq("id", prospectId)
+    .maybeSingle();
+
+  if (error || !data) {
+    return { prospect: null, supabase, error: "Prospect introuvable." };
+  }
+
+  return { prospect: data, supabase, error: null };
+}
+
+/** Prospecteur — déclare un RDV sur un créneau admin (passage en validation admin) */
+export async function declareRDV(
+  prospectId: string,
+  slotStartIso: string
+): Promise<RdvActionResult> {
   try {
     const profile = await getCurrentProfile();
     if (!profile || profile.role !== "prospecteur") {
       return { ok: false, error: "Accès refusé." };
     }
 
-    const { prospect, supabase, error } = await getProspectForAction(prospectId);
+    if (!slotStartIso?.trim()) {
+      return { ok: false, error: "Choisissez un créneau horaire." };
+    }
+
+    const slotCheck = await validateRdvSlot(slotStartIso);
+    if (!slotCheck.ok) {
+      return { ok: false, error: slotCheck.error ?? "Créneau invalide." };
+    }
+
+    const { prospect, supabase, error } = await getProspectForRdvBooking(prospectId);
     if (error || !prospect) {
       return { ok: false, error: error ?? "Prospect introuvable." };
     }
@@ -69,11 +101,16 @@ export async function declareRDV(prospectId: string): Promise<RdvActionResult> {
       return { ok: false, error: "RDV déjà validé pour ce lead." };
     }
 
+    const rdvDate = parseISO(slotStartIso);
+    if (!isValid(rdvDate)) {
+      return { ok: false, error: "Date de créneau invalide." };
+    }
+
     const { error: updateError } = await supabase
       .from("prospects")
       .update({
         rdv_status: "PENDING",
-        rdv_date: new Date().toISOString(),
+        rdv_date: rdvDate.toISOString(),
         rdv_rejection_reason: null,
       })
       .eq("id", prospectId);
@@ -81,6 +118,28 @@ export async function declareRDV(prospectId: string): Promise<RdvActionResult> {
     if (updateError) {
       console.error("[declareRDV]", updateError.message);
       return { ok: false, error: "Impossible de déclarer le RDV." };
+    }
+
+    const calendarSettings = await getRdvCalendarSettingsInternal();
+    if (calendarSettings?.google_refresh_token) {
+      const slotEnd = addMinutes(rdvDate, 30).toISOString();
+      const calendarResult = await createRdvCalendarEvent(
+        calendarSettings.google_refresh_token,
+        calendarSettings.google_calendar_id,
+        {
+          slotStartIso: rdvDate.toISOString(),
+          slotEndIso: slotEnd,
+          entreprise: prospect.entreprise,
+          prospectEmail: prospect.email,
+          prospectName: getFullName(prospect.prenom, prospect.nom),
+          prospecteurName: getProfileDisplayName(profile),
+          timeZone: calendarSettings.timezone,
+        }
+      );
+
+      if (!calendarResult.ok) {
+        console.error("[declareRDV] Google Calendar:", calendarResult.error);
+      }
     }
 
     revalidateProspectPaths();

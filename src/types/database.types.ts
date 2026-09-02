@@ -228,6 +228,75 @@ export type Database = {
         };
         Relationships: [];
       };
+      rdv_availability_rules: {
+        Row: {
+          id: string;
+          day_of_week: number;
+          start_time: string;
+          end_time: string;
+          slot_duration_minutes: number;
+          is_active: boolean;
+          label: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          day_of_week: number;
+          start_time: string;
+          end_time: string;
+          slot_duration_minutes?: number;
+          is_active?: boolean;
+          label?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          day_of_week?: number;
+          start_time?: string;
+          end_time?: string;
+          slot_duration_minutes?: number;
+          is_active?: boolean;
+          label?: string | null;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+      rdv_calendar_settings: {
+        Row: {
+          id: string;
+          singleton_key: string;
+          google_refresh_token: string | null;
+          google_calendar_id: string;
+          google_connected_email: string | null;
+          google_connected_at: string | null;
+          google_booking_url: string;
+          timezone: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          singleton_key?: string;
+          google_refresh_token?: string | null;
+          google_calendar_id?: string;
+          google_connected_email?: string | null;
+          google_connected_at?: string | null;
+          google_booking_url?: string;
+          timezone?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          singleton_key?: string;
+          google_refresh_token?: string | null;
+          google_calendar_id?: string;
+          google_connected_email?: string | null;
+          google_connected_at?: string | null;
+          google_booking_url?: string;
+          timezone?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;
@@ -238,6 +307,10 @@ export type Database = {
 
 export type ProfileRow = Database["public"]["Tables"]["profiles"]["Row"];
 export type ProspectRow = Database["public"]["Tables"]["prospects"]["Row"];
+export type RdvAvailabilityRuleRow =
+  Database["public"]["Tables"]["rdv_availability_rules"]["Row"];
+export type RdvCalendarSettingsRow =
+  Database["public"]["Tables"]["rdv_calendar_settings"]["Row"];
 export type ProspectorLogRow = Database["public"]["Tables"]["prospector_logs"]["Row"];
 export type ProspectorLogInsert = Database["public"]["Tables"]["prospector_logs"]["Insert"];
 

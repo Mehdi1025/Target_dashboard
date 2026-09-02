@@ -12,7 +12,6 @@ import {
 
 import {
   cancelPendingRDV,
-  declareRDV,
   updateCallDisposition,
 } from "@/app/actions/rdv-actions";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -28,6 +27,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
 import { getRdvRejectionReasonLabel } from "@/lib/rdv-rejection-reasons";
+import { openRdvBookingUrl } from "@/lib/rdv-booking-url";
 import { canDeclareRdvFromStatus } from "@/lib/rdv-utils";
 import { cn } from "@/lib/utils";
 import type { CallDisposition, RdvRejectionReason, RdvStatus } from "@/types/database.types";
@@ -81,7 +81,6 @@ export function ProspectCallActions({
   const [localRejectionReason, setLocalRejectionReason] = useState<RdvRejectionReason | null>(
     rdvRejectionReason
   );
-  const [isDeclaringRdv, setIsDeclaringRdv] = useState(false);
   const [isCancellingRdv, setIsCancellingRdv] = useState(false);
   const [isUpdatingDisposition, setIsUpdatingDisposition] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -89,7 +88,7 @@ export function ProspectCallActions({
 
   const canDeclareRdv = canDeclareRdvFromStatus(localRdvStatus);
   const showCallQualification = localRdvStatus === "NONE" && Boolean(profileId);
-  const isCallBusy = isUpdatingDisposition || isDeclaringRdv;
+  const isCallBusy = isUpdatingDisposition;
   const isSidebar = layout === "sidebar";
 
   useEffect(() => {
@@ -99,47 +98,6 @@ export function ProspectCallActions({
   useEffect(() => {
     setLocalRejectionReason(rdvRejectionReason);
   }, [rdvRejectionReason]);
-
-  async function handleDeclareRdv() {
-    if (!canDeclareRdv || isDeclaringRdv) return;
-
-    setIsDeclaringRdv(true);
-    setActionError(null);
-
-    try {
-      const result = await declareRDV(prospectId);
-      if (!result.ok) {
-        const message = result.error ?? "Impossible de déclarer le RDV.";
-        setActionError(message);
-        toast({ variant: "error", title: "Échec déclaration RDV", description: message });
-        return;
-      }
-
-      const rdvDate = new Date().toISOString();
-      setLocalRdvStatus("PENDING");
-      setLocalRejectionReason(null);
-      onPatch?.({
-        rdv_status: "PENDING",
-        rdv_date: rdvDate,
-        rdv_rejection_reason: null,
-      });
-      toast({
-        variant: "success",
-        title: "RDV déclaré",
-        description: `${entreprise} — en attente de validation admin.`,
-        duration: 6000,
-      });
-    } catch {
-      setActionError("Erreur réseau.");
-      toast({
-        variant: "error",
-        title: "Erreur réseau",
-        description: "Impossible de contacter le serveur.",
-      });
-    } finally {
-      setIsDeclaringRdv(false);
-    }
-  }
 
   async function handleCancelPendingRdv() {
     if (!profileId || isCancellingRdv || localRdvStatus !== "PENDING") return;
@@ -307,11 +265,14 @@ export function ProspectCallActions({
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
-                  onClick={() => void handleDeclareRdv()}
-                  disabled={isDeclaringRdv}
+                  onClick={() => {
+                    if (!canDeclareRdv || isUpdatingDisposition) return;
+                    openRdvBookingUrl();
+                  }}
+                  disabled={isUpdatingDisposition}
                 >
                   <CalendarCheck className="text-orange-600" />
-                  Déclarer RDV
+                  Réserver sur Google Calendar
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenuPositioner>
@@ -326,12 +287,11 @@ export function ProspectCallActions({
             "gap-1.5 bg-orange-600 text-white shadow-sm hover:bg-orange-500",
             isSidebar && "h-10 w-full justify-start gap-3"
           )}
-          onClick={() => void handleDeclareRdv()}
-          loading={isDeclaringRdv}
-          disabled={isDeclaringRdv}
+          onClick={() => openRdvBookingUrl()}
+          disabled={isCallBusy}
         >
           <CalendarCheck className="size-3.5" />
-          Redéclarer RDV
+          Re-réserver sur Google Calendar
         </Button>
       ) : null}
 

@@ -14,13 +14,13 @@ import {
   Zap,
 } from "lucide-react";
 
-import { declareRDV } from "@/app/actions/rdv-actions";
+import { openRdvBookingUrl } from "@/lib/rdv-booking-url";
+import { computeMissionQueue, type MissionItem } from "@/lib/mission-queue";
+import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { useProspectsRdvRealtime } from "@/hooks/use-prospects-rdv-realtime";
 import { useToast } from "@/hooks/use-toast";
-import { computeMissionQueue, type MissionItem } from "@/lib/mission-queue";
-import { cn } from "@/lib/utils";
 import type { ProspectListItem } from "@/types/prospect";
 
 type MissionQueuePanelProps = {
@@ -79,18 +79,9 @@ export function MissionQueuePanel({
         }
 
         if (item.actionType === "declare_rdv" || item.actionType === "redo_rdv") {
-          const result = await declareRDV(item.prospectId);
-          if (!result.ok) throw new Error(result.error ?? "Échec RDV");
-
-          handleProspectPatch(item.prospectId, {
-            rdv_status: "PENDING",
-            rdv_date: new Date().toISOString(),
-          });
-          toast({
-            variant: "success",
-            title: item.actionType === "redo_rdv" ? "RDV re-déclaré" : "RDV déclaré",
-            description: `${item.entreprise} — en attente de validation admin.`,
-          });
+          openRdvBookingUrl();
+          setPendingId(null);
+          return;
         }
 
         if (item.actionType === "follow_up_closing" || item.actionType === "open_lead") {

@@ -121,7 +121,7 @@ export function computeMissionQueue(prospects: ProspectListItem[]): MissionQueue
           "redo_rdv",
           `Corriger RDV — ${prospect.entreprise}`,
           "RDV rejeté · hors critères qualité · re-déclarer après correction",
-          "Re-déclarer RDV",
+          "Re-réserver sur Google Calendar",
           9_500 + score
         )
       );
@@ -133,9 +133,9 @@ export function computeMissionQueue(prospects: ProspectListItem[]): MissionQueue
         buildMission(
           prospect,
           "declare_rdv",
-          `Déclarer RDV — ${prospect.entreprise}`,
+          `Réserver RDV — ${prospect.entreprise}`,
           `Lead prêt depuis ${Math.floor(ageHours / 24)}j · risque de refroidissement`,
-          "Déclarer RDV",
+          "Réserver sur Google Calendar",
           9_000 + score
         )
       );
@@ -167,8 +167,8 @@ export function computeMissionQueue(prospects: ProspectListItem[]): MissionQueue
           prospect,
           "declare_rdv",
           `Booker RDV — ${prospect.entreprise}`,
-          `Score ${score} · prêt à déclarer un RDV (+1 vers l'objectif ${WEEKLY_RDV_TARGET})`,
-          "Déclarer RDV",
+          `Score ${score} · prêt à réserver un RDV (+1 vers l'objectif ${WEEKLY_RDV_TARGET})`,
+          "Réserver sur Google Calendar",
           8_000 + score
         )
       );
@@ -180,9 +180,9 @@ export function computeMissionQueue(prospects: ProspectListItem[]): MissionQueue
         buildMission(
           prospect,
           "declare_rdv",
-          `Déclarer RDV — ${prospect.entreprise}`,
+          `Réserver RDV — ${prospect.entreprise}`,
           "Lead contacté · prêt à être booké",
-          "Déclarer RDV",
+          "Réserver sur Google Calendar",
           6_000 + score
         )
       );

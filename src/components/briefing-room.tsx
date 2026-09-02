@@ -20,7 +20,7 @@ import {
   TrendingUp,
 } from "lucide-react";
 
-import { declareRDV } from "@/app/actions/rdv-actions";
+import { openRdvBookingUrl } from "@/lib/rdv-booking-url";
 import { AuditLinkActions } from "@/components/audit-link-actions";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -88,7 +88,6 @@ export function BriefingRoom({ prospects: initialProspects }: BriefingRoomProps)
   const { logAction } = useTrackActivity();
   const [prospects, setProspects] = useState(initialProspects);
   const [checklist, setChecklist] = useState<ChecklistState>(DEFAULT_CHECKLIST);
-  const [isDeclaring, startDeclare] = useTransition();
 
   useEffect(() => {
     setProspects(initialProspects);
@@ -133,34 +132,6 @@ export function BriefingRoom({ prospects: initialProspects }: BriefingRoomProps)
     setProspects((items) =>
       items.map((item) => (item.id === id ? { ...item, ...patch } : item))
     );
-  }
-
-  function handleDeclareRdv() {
-    if (!current) return;
-    const rdvStatus = current.rdv_status ?? "NONE";
-    if (!canDeclareRdvFromStatus(rdvStatus)) return;
-
-    startDeclare(async () => {
-      const result = await declareRDV(current.id);
-      if (!result.ok) {
-        toast({
-          variant: "error",
-          title: "Déclaration impossible",
-          description: result.error,
-        });
-        return;
-      }
-
-      patchProspect(current.id, {
-        rdv_status: "PENDING",
-        rdv_date: new Date().toISOString(),
-      });
-      toast({
-        variant: "success",
-        title: "RDV déclaré",
-        description: `${current.entreprise} — briefing terminé, en attente admin.`,
-      });
-    });
   }
 
   async function copyScript() {
@@ -452,12 +423,10 @@ export function BriefingRoom({ prospects: initialProspects }: BriefingRoomProps)
               <Button
                 type="button"
                 className="bg-indigo-500 text-white hover:bg-indigo-400"
-                loading={isDeclaring}
-                disabled={isDeclaring}
-                onClick={handleDeclareRdv}
+                onClick={() => openRdvBookingUrl()}
               >
-                <CalendarCheck className="size-3.5" />
-                Déclarer le RDV
+                <ExternalLink className="size-3.5" />
+                Réserver sur Google Calendar
               </Button>
             ) : (
               <p className="text-xs text-slate-400">

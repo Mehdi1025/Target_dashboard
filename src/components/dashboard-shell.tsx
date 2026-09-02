@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 
 import { signOutAction } from "@/app/actions/admin";
+import { RdvCalendarNotice } from "@/components/rdv-calendar-notice";
 import { ToastStack } from "@/components/ui/toast-stack";
 import { ToastProvider } from "@/components/toast-provider";
 import { getProfileDisplayName } from "@/lib/profile-utils";
@@ -328,6 +329,8 @@ export function DashboardShell({ children, profile }: DashboardShellProps) {
               </div>
             </div>
           </header>
+
+          {!isAdmin ? <RdvCalendarNotice /> : null}
 
           <main className="flex-1 px-5 py-8 lg:px-8 lg:py-10">{children}</main>
         </div>
