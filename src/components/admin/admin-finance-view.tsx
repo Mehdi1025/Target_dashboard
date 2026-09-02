@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 
 import { MoneyCommandPanel } from "@/components/admin/money-command-panel";
+import { AdminDataGate } from "@/components/admin/admin-data-gate";
 import { useAdminData } from "@/contexts/admin-data-context";
 import { computeMoneyCommand } from "@/lib/money-command";
 
@@ -34,7 +35,9 @@ export function AdminFinanceView() {
         </div>
       </section>
 
-      <MoneyCommandPanel stats={moneyStats} />
+      <AdminDataGate skeletonRows={4}>
+        <MoneyCommandPanel stats={moneyStats} />
+      </AdminDataGate>
     </div>
   );
 }

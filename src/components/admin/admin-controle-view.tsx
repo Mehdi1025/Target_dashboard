@@ -4,11 +4,13 @@ import { useEffect, useMemo, useState } from "react";
 
 import { fetchProspectorLastActivity } from "@/app/actions/admin-data-actions";
 import { ControlTowerPanel } from "@/components/admin/control-tower-panel";
+import { AdminDataGate } from "@/components/admin/admin-data-gate";
+import { AdminPanelSkeleton } from "@/components/admin/admin-panel-skeleton";
 import { useAdminData } from "@/contexts/admin-data-context";
 import { computeControlTower } from "@/lib/control-tower";
 
 export function AdminControleView() {
-  const { prospects, prospecteurs, orphans } = useAdminData();
+  const { prospects, prospecteurs, orphans, isReady, refreshKey } = useAdminData();
   const [lastActivityByProfileId, setLastActivityByProfileId] = useState<
     Record<string, string>
   >({});
@@ -16,7 +18,10 @@ export function AdminControleView() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (!isReady) return;
+
     let cancelled = false;
+    setLoading(true);
 
     void fetchProspectorLastActivity().then((result) => {
       if (cancelled) return;
@@ -28,7 +33,7 @@ export function AdminControleView() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [isReady, refreshKey]);
 
   const controlStats = useMemo(
     () => computeControlTower(prospecteurs, prospects, orphans, lastActivityByProfileId),
@@ -60,8 +65,8 @@ export function AdminControleView() {
           <p className="font-semibold">Erreur de chargement</p>
           <p className="mt-1 text-destructive/80">{error}</p>
         </div>
-      ) : loading ? (
-        <div className="h-64 animate-pulse rounded-[1.75rem] bg-muted" />
+      ) : !isReady || loading ? (
+        <AdminPanelSkeleton rows={4} />
       ) : (
         <ControlTowerPanel stats={controlStats} />
       )}

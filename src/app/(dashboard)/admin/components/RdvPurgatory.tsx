@@ -84,7 +84,7 @@ export function RdvPurgatory({ prospects, prospecteurs }: RdvPurgatoryProps) {
       if (!result.ok) {
         setErrors((prev) => ({ ...prev, [prospectId]: result.error ?? "Erreur." }));
       } else {
-        void refreshSharedData();
+        void refreshSharedData({ silent: true });
       }
       setPendingId(null);
     });
@@ -120,7 +120,7 @@ export function RdvPurgatory({ prospects, prospecteurs }: RdvPurgatoryProps) {
           description: `${entreprise} — ${formatEuro(commission)} crédités au prospecteur.`,
           duration: 7000,
         });
-        void refreshSharedData();
+        void refreshSharedData({ silent: true });
       }
       setClosingId(null);
     });
@@ -137,7 +137,7 @@ export function RdvPurgatory({ prospects, prospecteurs }: RdvPurgatoryProps) {
         entreprise={rejectTarget?.entreprise}
         onSuccess={() => {
           setRejectTarget(null);
-          void refreshSharedData();
+          void refreshSharedData({ silent: true });
         }}
         onError={(message) => {
           if (rejectTarget) {

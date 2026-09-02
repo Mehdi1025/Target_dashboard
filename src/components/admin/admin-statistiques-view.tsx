@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 
 import { AdminStatisticsSection } from "@/components/admin/admin-statistics-section";
+import { AdminDataGate } from "@/components/admin/admin-data-gate";
 import { useAdminData } from "@/contexts/admin-data-context";
 import { computeAdminOverview, computeAdminStatistics } from "@/lib/admin-stats";
 
@@ -39,7 +40,9 @@ export function AdminStatistiquesView() {
         </div>
       </section>
 
-      <AdminStatisticsSection statistics={statistics} />
+      <AdminDataGate skeletonRows={5}>
+        <AdminStatisticsSection statistics={statistics} />
+      </AdminDataGate>
     </div>
   );
 }

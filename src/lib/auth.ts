@@ -1,10 +1,12 @@
+import { cache } from "react";
+
 import { createClient } from "@/lib/supabase/server";
 import { getProfileDisplayName } from "@/lib/profile-utils";
 import type { ProfileRow } from "@/types/database.types";
 
 export { getProfileDisplayName };
 
-export async function getCurrentUser() {
+export const getCurrentUser = cache(async () => {
   const supabase = await createClient();
   const {
     data: { user },
@@ -16,9 +18,9 @@ export async function getCurrentUser() {
   }
 
   return user;
-}
+});
 
-export async function getCurrentProfile(): Promise<ProfileRow | null> {
+export const getCurrentProfile = cache(async (): Promise<ProfileRow | null> => {
   const supabase = await createClient();
   const {
     data: { user },
@@ -39,4 +41,4 @@ export async function getCurrentProfile(): Promise<ProfileRow | null> {
   }
 
   return profile;
-}
+});

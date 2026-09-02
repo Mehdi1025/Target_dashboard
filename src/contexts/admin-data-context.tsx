@@ -6,6 +6,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
@@ -21,58 +22,80 @@ export type AdminSharedData = {
 };
 
 type AdminDataContextValue = AdminSharedData & {
+  isLoading: boolean;
+  error: string | null;
+  isReady: boolean;
   refreshKey: number;
   bumpRefreshKey: () => void;
-  refreshSharedData: () => Promise<void>;
+  refreshSharedData: (options?: { silent?: boolean }) => Promise<void>;
 };
 
 const AdminDataContext = createContext<AdminDataContextValue | null>(null);
 
-type AdminDataProviderProps = AdminSharedData & {
-  children: ReactNode;
-};
-
-export function AdminDataProvider({
-  prospects: initialProspects,
-  prospecteurs: initialProspecteurs,
-  orphans: initialOrphans,
-  children,
-}: AdminDataProviderProps) {
-  const [prospects, setProspects] = useState(initialProspects);
-  const [prospecteurs, setProspecteurs] = useState(initialProspecteurs);
-  const [orphans, setOrphans] = useState(initialOrphans);
+export function AdminDataProvider({ children }: { children: ReactNode }) {
+  const [prospects, setProspects] = useState<ProspectListItem[]>([]);
+  const [prospecteurs, setProspecteurs] = useState<ProfileRow[]>([]);
+  const [orphans, setOrphans] = useState<OrphanProspectItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
+  const hasLoadedRef = useRef(false);
+
+  const applyPayload = useCallback(
+    (data: Awaited<ReturnType<typeof refreshAdminSharedData>>) => {
+      if (data.error) {
+        setError(data.error);
+        return;
+      }
+
+      setProspects(data.prospects);
+      setProspecteurs(data.prospecteurs);
+      setOrphans(data.orphans);
+      setError(null);
+      setRefreshKey((value) => value + 1);
+      hasLoadedRef.current = true;
+    },
+    []
+  );
+
+  const refreshSharedData = useCallback(
+    async (options?: { silent?: boolean }) => {
+      if (!options?.silent) {
+        setIsLoading(!hasLoadedRef.current);
+      }
+
+      const data = await refreshAdminSharedData();
+      applyPayload(data);
+      setIsLoading(false);
+    },
+    [applyPayload]
+  );
 
   useEffect(() => {
-    setProspects(initialProspects);
-    setProspecteurs(initialProspecteurs);
-    setOrphans(initialOrphans);
-  }, [initialProspects, initialProspecteurs, initialOrphans]);
-
-  const bumpRefreshKey = useCallback(() => {
-    setRefreshKey((value) => value + 1);
-  }, []);
-
-  const refreshSharedData = useCallback(async () => {
-    const data = await refreshAdminSharedData();
-    if (data.error) return;
-
-    setProspects(data.prospects);
-    setProspecteurs(data.prospecteurs);
-    setOrphans(data.orphans);
-    setRefreshKey((value) => value + 1);
-  }, []);
+    void refreshSharedData();
+  }, [refreshSharedData]);
 
   const value = useMemo(
     () => ({
       prospects,
       prospecteurs,
       orphans,
+      isLoading,
+      error,
+      isReady: !isLoading && !error && hasLoadedRef.current,
       refreshKey,
-      bumpRefreshKey,
+      bumpRefreshKey: () => setRefreshKey((value) => value + 1),
       refreshSharedData,
     }),
-    [prospects, prospecteurs, orphans, refreshKey, bumpRefreshKey, refreshSharedData]
+    [
+      prospects,
+      prospecteurs,
+      orphans,
+      isLoading,
+      error,
+      refreshKey,
+      refreshSharedData,
+    ]
   );
 
   return <AdminDataContext.Provider value={value}>{children}</AdminDataContext.Provider>;

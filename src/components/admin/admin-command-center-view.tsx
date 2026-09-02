@@ -9,6 +9,8 @@ import {
   fetchTodayCallDispositionEvents,
 } from "@/app/actions/admin-data-actions";
 import { AdminKpiPanel } from "@/components/admin/admin-kpi-panel";
+import { AdminDataGate } from "@/components/admin/admin-data-gate";
+import { AdminPanelSkeleton } from "@/components/admin/admin-panel-skeleton";
 import { OracleAdminPanel } from "@/components/admin/oracle-admin-panel";
 import { OrphanLeadsTable } from "@/components/admin/orphan-leads-table";
 import { ProspecteursManagementTable } from "@/components/admin/prospecteurs-management-table";
@@ -29,7 +31,8 @@ type CalendarView = {
 };
 
 export function AdminCommandCenterView() {
-  const { prospects, prospecteurs, orphans, refreshKey } = useAdminData();
+  const { prospects, prospecteurs, orphans, isReady, refreshKey, error: sharedError } =
+    useAdminData();
   const [calendarView, setCalendarView] = useState<CalendarView>({
     overdue: [],
     overdueLabel: "",
@@ -45,7 +48,10 @@ export function AdminCommandCenterView() {
   const [extrasLoading, setExtrasLoading] = useState(true);
 
   useEffect(() => {
+    if (!isReady) return;
+
     let cancelled = false;
+    setExtrasLoading(true);
 
     void Promise.all([fetchAdminRdvCalendar(), fetchTodayCallDispositionEvents()]).then(
       ([calendar, dispositions]) => {
@@ -68,7 +74,7 @@ export function AdminCommandCenterView() {
     return () => {
       cancelled = true;
     };
-  }, [refreshKey]);
+  }, [isReady, refreshKey]);
 
   const overview = useMemo(
     () => computeAdminOverview(prospecteurs, prospects, orphans.length),
@@ -105,26 +111,36 @@ export function AdminCommandCenterView() {
         </div>
       </section>
 
-      {extrasError ? (
+      {sharedError ? (
         <div className="rounded-2xl border border-destructive/30 bg-destructive/5 px-6 py-5 text-sm text-destructive">
-          <p className="font-semibold">Erreur de chargement partiel</p>
-          <p className="mt-1 text-destructive/80">{extrasError}</p>
+          <p className="font-semibold">Erreur de chargement</p>
+          <p className="mt-1 text-destructive/80">{sharedError}</p>
         </div>
       ) : null}
 
-      <OracleAdminPanel snapshot={oracle} />
-      <AdminKpiPanel overview={overview} />
+      <AdminDataGate skeletonRows={2}>
+        <OracleAdminPanel snapshot={oracle} />
+        <AdminKpiPanel overview={overview} />
+      </AdminDataGate>
 
       <section id="purgatoire" className="scroll-mt-24">
-        {extrasLoading ? (
-          <div className="h-64 animate-pulse rounded-2xl bg-muted" />
+        {!isReady || extrasLoading ? (
+          <AdminPanelSkeleton rows={4} />
         ) : (
-          <RdvPurgatorySection
-            prospects={prospects}
-            prospecteurs={prospecteurs}
-            calendar={calendarView}
-            pendingTomorrowCount={pendingTomorrowCount}
-          />
+          <>
+            {extrasError ? (
+              <div className="mb-4 rounded-2xl border border-destructive/30 bg-destructive/5 px-6 py-5 text-sm text-destructive">
+                <p className="font-semibold">Erreur calendrier RDV</p>
+                <p className="mt-1 text-destructive/80">{extrasError}</p>
+              </div>
+            ) : null}
+            <RdvPurgatorySection
+              prospects={prospects}
+              prospecteurs={prospecteurs}
+              calendar={calendarView}
+              pendingTomorrowCount={pendingTomorrowCount}
+            />
+          </>
         )}
       </section>
 
@@ -135,33 +151,39 @@ export function AdminCommandCenterView() {
             Flux temps réel des micro-actions prospecteurs
           </p>
         </div>
-        <LiveActivityFeed prospecteurs={prospecteurs} />
+        {isReady ? (
+          <LiveActivityFeed prospecteurs={prospecteurs} />
+        ) : (
+          <AdminPanelSkeleton rows={3} />
+        )}
       </section>
 
-      <section className="space-y-4">
-        <div className="flex flex-wrap items-end justify-between gap-4">
-          <div>
-            <h2 className="text-xl font-bold tracking-tight">Équipe prospecteurs</h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Performance individuelle et accès au détail de chaque membre
+      <AdminDataGate skeletonRows={3}>
+        <section className="space-y-4">
+          <div className="flex flex-wrap items-end justify-between gap-4">
+            <div>
+              <h2 className="text-xl font-bold tracking-tight">Équipe prospecteurs</h2>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Performance individuelle et accès au détail de chaque membre
+              </p>
+            </div>
+            <p className="text-xs font-medium text-muted-foreground">
+              {overview.aValiderGlobal} à valider · {overview.approuvesGlobal} approuvés (global)
             </p>
           </div>
-          <p className="text-xs font-medium text-muted-foreground">
-            {overview.aValiderGlobal} à valider · {overview.approuvesGlobal} approuvés (global)
-          </p>
-        </div>
-        <ProspecteursManagementTable rows={overview.prospecteurRows} />
-      </section>
+          <ProspecteursManagementTable rows={overview.prospecteurRows} />
+        </section>
 
-      <section id="orphelins" className="space-y-4 scroll-mt-24">
-        <div>
-          <h2 className="text-xl font-bold tracking-tight">Distribution des leads orphelins</h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Leads générés par n8n sans prospecteur — assignez-les manuellement
-          </p>
-        </div>
-        <OrphanLeadsTable orphans={orphans} prospecteurs={prospecteurs} />
-      </section>
+        <section id="orphelins" className="space-y-4 scroll-mt-24">
+          <div>
+            <h2 className="text-xl font-bold tracking-tight">Distribution des leads orphelins</h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Leads générés par n8n sans prospecteur — assignez-les manuellement
+            </p>
+          </div>
+          <OrphanLeadsTable orphans={orphans} prospecteurs={prospecteurs} />
+        </section>
+      </AdminDataGate>
     </div>
   );
 }
