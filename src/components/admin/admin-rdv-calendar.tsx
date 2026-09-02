@@ -15,7 +15,7 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import type {
   AdminCalendarRdvItem,
   AdminRdvCalendarDay,
-} from "@/lib/get-admin-calendar";
+} from "@/lib/admin-calendar-shared";
 import { getProfileDisplayName } from "@/lib/profile-utils";
 import { getRdvBadgeClass, RDV_STATUS_LABELS } from "@/lib/rdv-utils";
 import { cn } from "@/lib/utils";

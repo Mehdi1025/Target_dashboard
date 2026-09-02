@@ -17,8 +17,8 @@ import { ProspecteursManagementTable } from "@/components/admin/prospecteurs-man
 import { useAdminData } from "@/contexts/admin-data-context";
 import { computeAdminOverview } from "@/lib/admin-stats";
 import { computeOracleAdmin } from "@/lib/oracle-admin";
-import { countPendingRdvTomorrow } from "@/lib/get-admin-calendar";
-import type { AdminCalendarRdvItem, AdminRdvCalendarDay } from "@/lib/get-admin-calendar";
+import { countPendingRdvTomorrow } from "@/lib/admin-calendar-shared";
+import type { AdminCalendarRdvItem, AdminRdvCalendarDay } from "@/lib/admin-calendar-shared";
 import type { OracleCallDispositionEvent } from "@/lib/oracle-admin";
 
 type CalendarView = {
