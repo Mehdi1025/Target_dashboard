@@ -38,7 +38,7 @@ async function getProspectForAction(prospectId: string) {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("prospects")
-    .select("id, assigned_to, rdv_status, statut, entreprise")
+    .select("id, assigned_to, rdv_status, statut, entreprise, rdv_date")
     .eq("id", prospectId)
     .maybeSingle();
 
@@ -62,6 +62,54 @@ async function getProspectForRdvBooking(prospectId: string) {
   }
 
   return { prospect: data, supabase, error: null };
+}
+
+/** Prospecteur — déclare un RDV booké sur Google Calendar (sans créneau interne). */
+export async function declareExternalRdv(prospectId: string): Promise<RdvActionResult> {
+  try {
+    const profile = await getCurrentProfile();
+    if (!profile || profile.role !== "prospecteur") {
+      return { ok: false, error: "Accès refusé." };
+    }
+
+    const { prospect, supabase, error } = await getProspectForAction(prospectId);
+    if (error || !prospect) {
+      return { ok: false, error: error ?? "Prospect introuvable." };
+    }
+
+    if (prospect.assigned_to !== profile.id) {
+      return { ok: false, error: "Ce lead ne vous est pas assigné." };
+    }
+
+    const currentStatus = prospect.rdv_status as RdvStatus;
+    if (currentStatus === "PENDING") {
+      return { ok: false, error: "RDV déjà en attente de validation." };
+    }
+    if (currentStatus === "VALIDATED") {
+      return { ok: false, error: "RDV déjà validé pour ce lead." };
+    }
+
+    const { error: updateError } = await supabase
+      .from("prospects")
+      .update({
+        rdv_status: "PENDING",
+        rdv_date: null,
+        rdv_rejection_reason: null,
+      })
+      .eq("id", prospectId);
+
+    if (updateError) {
+      console.error("[declareExternalRdv]", updateError.message);
+      return { ok: false, error: "Impossible de déclarer le RDV." };
+    }
+
+    revalidateProspectPaths();
+
+    return { ok: true };
+  } catch (err) {
+    console.error("[declareExternalRdv] unexpected:", err);
+    return { ok: false, error: "Erreur serveur." };
+  }
 }
 
 /** Prospecteur — déclare un RDV sur un créneau admin (passage en validation admin) */
@@ -281,12 +329,14 @@ export async function validateRDV(
     }
 
     const newStatus: RdvStatus = isApproved ? "VALIDATED" : "REJECTED";
+    const approvedWithoutDate = isApproved && !prospect.rdv_date;
 
     const { error: updateError } = await supabase
       .from("prospects")
       .update({
         rdv_status: newStatus,
         rdv_rejection_reason: isApproved ? null : rejectionReason ?? null,
+        ...(approvedWithoutDate ? { rdv_date: new Date().toISOString() } : {}),
       })
       .eq("id", prospectId);
 

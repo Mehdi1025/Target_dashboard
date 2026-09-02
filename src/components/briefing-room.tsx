@@ -20,7 +20,10 @@ import {
   TrendingUp,
 } from "lucide-react";
 
-import { openRdvBookingUrl } from "@/lib/rdv-booking-url";
+import {
+  EXTERNAL_RDV_DECLARE_PATCH,
+  reserveRdvViaGoogleCalendar,
+} from "@/lib/reserve-rdv-via-calendar";
 import { AuditLinkActions } from "@/components/audit-link-actions";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -88,6 +91,7 @@ export function BriefingRoom({ prospects: initialProspects }: BriefingRoomProps)
   const { logAction } = useTrackActivity();
   const [prospects, setProspects] = useState(initialProspects);
   const [checklist, setChecklist] = useState<ChecklistState>(DEFAULT_CHECKLIST);
+  const [isReservingRdv, setIsReservingRdv] = useState(false);
 
   useEffect(() => {
     setProspects(initialProspects);
@@ -132,6 +136,34 @@ export function BriefingRoom({ prospects: initialProspects }: BriefingRoomProps)
     setProspects((items) =>
       items.map((item) => (item.id === id ? { ...item, ...patch } : item))
     );
+  }
+
+  async function handleReserveRdv() {
+    if (!current || isReservingRdv || !canDeclareRdvFromStatus(current.rdv_status ?? "NONE")) return;
+
+    setIsReservingRdv(true);
+    try {
+      const result = await reserveRdvViaGoogleCalendar(current.id);
+      if (!result.ok) {
+        toast({
+          variant: "error",
+          title: "Réservation impossible",
+          description: result.error ?? "Impossible de déclarer le RDV.",
+        });
+        return;
+      }
+
+      patchProspect(current.id, EXTERNAL_RDV_DECLARE_PATCH);
+      toast({
+        variant: "success",
+        title: "RDV déclaré",
+        description: `${current.entreprise} — agenda ouvert · en attente de validation admin.`,
+      });
+    } catch {
+      toast({ variant: "error", title: "Erreur réseau" });
+    } finally {
+      setIsReservingRdv(false);
+    }
   }
 
   async function copyScript() {
@@ -423,7 +455,9 @@ export function BriefingRoom({ prospects: initialProspects }: BriefingRoomProps)
               <Button
                 type="button"
                 className="bg-indigo-500 text-white hover:bg-indigo-400"
-                onClick={() => openRdvBookingUrl()}
+                loading={isReservingRdv}
+                disabled={isReservingRdv}
+                onClick={() => void handleReserveRdv()}
               >
                 <ExternalLink className="size-3.5" />
                 Réserver sur Google Calendar

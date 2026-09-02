@@ -14,7 +14,10 @@ import {
   Zap,
 } from "lucide-react";
 
-import { openRdvBookingUrl } from "@/lib/rdv-booking-url";
+import {
+  EXTERNAL_RDV_DECLARE_PATCH,
+  reserveRdvViaGoogleCalendar,
+} from "@/lib/reserve-rdv-via-calendar";
 import { computeMissionQueue, type MissionItem } from "@/lib/mission-queue";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
@@ -79,7 +82,22 @@ export function MissionQueuePanel({
         }
 
         if (item.actionType === "declare_rdv" || item.actionType === "redo_rdv") {
-          openRdvBookingUrl();
+          const result = await reserveRdvViaGoogleCalendar(item.prospectId);
+          if (!result.ok) {
+            toast({
+              variant: "error",
+              title: "Réservation impossible",
+              description: result.error ?? "Impossible de déclarer le RDV.",
+            });
+            return;
+          }
+
+          handleProspectPatch(item.prospectId, EXTERNAL_RDV_DECLARE_PATCH);
+          toast({
+            variant: "success",
+            title: item.actionType === "redo_rdv" ? "RDV re-déclaré" : "RDV déclaré",
+            description: `${item.entreprise} — agenda ouvert · en attente de validation admin.`,
+          });
           setPendingId(null);
           return;
         }
