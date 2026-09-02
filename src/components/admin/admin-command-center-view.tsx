@@ -181,7 +181,7 @@ export function AdminCommandCenterView() {
               Leads générés par n8n sans prospecteur — assignez-les manuellement
             </p>
           </div>
-          <OrphanLeadsTable orphans={orphans} prospecteurs={prospecteurs} />
+          <OrphanLeadsTable />
         </section>
       </AdminDataGate>
     </div>

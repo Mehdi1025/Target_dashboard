@@ -4,16 +4,15 @@ import { useState, useTransition } from "react";
 import { UserPlus } from "lucide-react";
 
 import { assignProspectAction } from "@/app/actions/admin";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import type { OrphanProspectItem, ProfileRow } from "@/types/database.types";
+import { Button } from "@/components/ui/button";
+import { useAdminData } from "@/contexts/admin-data-context";
+import { useToast } from "@/hooks/use-toast";
+import { getProfileDisplayName } from "@/lib/profile-utils";
 
-type OrphanLeadsTableProps = {
-  orphans: OrphanProspectItem[];
-  prospecteurs: ProfileRow[];
-};
-
-export function OrphanLeadsTable({ orphans, prospecteurs }: OrphanLeadsTableProps) {
+export function OrphanLeadsTable() {
+  const { orphans, prospecteurs, markOrphanAssigned } = useAdminData();
+  const { toast } = useToast();
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [selections, setSelections] = useState<Record<string, string>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -39,6 +38,9 @@ export function OrphanLeadsTable({ orphans, prospecteurs }: OrphanLeadsTableProp
       return;
     }
 
+    const orphan = orphans.find((item) => item.id === prospectId);
+    const prospecteur = prospecteurs.find((item) => item.id === prospecteurId);
+
     setPendingId(prospectId);
     setErrors((prev) => ({ ...prev, [prospectId]: "" }));
 
@@ -47,9 +49,25 @@ export function OrphanLeadsTable({ orphans, prospecteurs }: OrphanLeadsTableProp
 
       if (result.error) {
         setErrors((prev) => ({ ...prev, [prospectId]: result.error! }));
+        setPendingId(null);
+        return;
       }
 
+      markOrphanAssigned(prospectId, prospecteurId);
+      setSelections((prev) => {
+        const next = { ...prev };
+        delete next[prospectId];
+        return next;
+      });
       setPendingId(null);
+
+      toast({
+        variant: "success",
+        title: "Lead assigné",
+        description: orphan
+          ? `${orphan.entreprise} → ${prospecteur ? getProfileDisplayName(prospecteur) : "prospecteur"}`
+          : "Le lead a été assigné au prospecteur.",
+      });
     });
   }
 
@@ -102,9 +120,7 @@ export function OrphanLeadsTable({ orphans, prospecteurs }: OrphanLeadsTableProp
                       <option value="">Choisir…</option>
                       {prospecteurs.map((prospecteur) => (
                         <option key={prospecteur.id} value={prospecteur.id}>
-                          {[prospecteur.prenom, prospecteur.nom]
-                            .filter(Boolean)
-                            .join(" ") || prospecteur.email}
+                          {getProfileDisplayName(prospecteur)}
                         </option>
                       ))}
                     </select>

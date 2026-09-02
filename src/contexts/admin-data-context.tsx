@@ -28,6 +28,7 @@ type AdminDataContextValue = AdminSharedData & {
   refreshKey: number;
   bumpRefreshKey: () => void;
   refreshSharedData: (options?: { silent?: boolean }) => Promise<void>;
+  markOrphanAssigned: (prospectId: string, prospecteurId: string) => void;
 };
 
 const AdminDataContext = createContext<AdminDataContextValue | null>(null);
@@ -71,6 +72,18 @@ export function AdminDataProvider({ children }: { children: ReactNode }) {
     [applyPayload]
   );
 
+  const markOrphanAssigned = useCallback((prospectId: string, prospecteurId: string) => {
+    setOrphans((current) => current.filter((orphan) => orphan.id !== prospectId));
+    setProspects((current) =>
+      current.map((prospect) =>
+        prospect.id === prospectId
+          ? { ...prospect, assigned_to: prospecteurId }
+          : prospect
+      )
+    );
+    setRefreshKey((value) => value + 1);
+  }, []);
+
   useEffect(() => {
     void refreshSharedData();
   }, [refreshSharedData]);
@@ -86,6 +99,7 @@ export function AdminDataProvider({ children }: { children: ReactNode }) {
       refreshKey,
       bumpRefreshKey: () => setRefreshKey((value) => value + 1),
       refreshSharedData,
+      markOrphanAssigned,
     }),
     [
       prospects,
@@ -95,6 +109,7 @@ export function AdminDataProvider({ children }: { children: ReactNode }) {
       error,
       refreshKey,
       refreshSharedData,
+      markOrphanAssigned,
     ]
   );
 
