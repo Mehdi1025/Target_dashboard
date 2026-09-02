@@ -67,12 +67,13 @@ export function AuditLinkActions({
     if (variant === "inline") {
       return (
         <Button
-          variant="outline"
+          variant="ghost"
           size="sm"
           onClick={handleGenerateSlug}
           loading={isGenerating}
+          className="h-8 w-full justify-start gap-2 px-2 text-xs text-muted-foreground hover:text-foreground"
         >
-          Générer le lien
+          Générer le lien audit
         </Button>
       );
     }
@@ -115,8 +116,13 @@ export function AuditLinkActions({
 
   if (variant === "inline") {
     return (
-      <Button variant="outline" size="sm" onClick={handleCopy}>
-        {copied ? "Copié !" : "Copier le lien audit"}
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={handleCopy}
+        className="h-8 w-full justify-start gap-2 px-2 text-xs text-muted-foreground hover:text-foreground"
+      >
+        {copied ? "Lien audit copié !" : "Copier le lien audit client"}
       </Button>
     );
   }
