@@ -1,10 +1,12 @@
+import { cache } from "react";
+
 import { createClient } from "@/lib/supabase/server";
 import { PROSPECT_LIST_SELECT, type ProspectListItem } from "@/types/prospect";
 
-export async function getProspects(): Promise<{
+export const getProspects = cache(async (): Promise<{
   prospects: ProspectListItem[];
   error: string | null;
-}> {
+}> => {
   try {
     const supabase = await createClient();
     const { data, error } = await supabase
@@ -25,4 +27,4 @@ export async function getProspects(): Promise<{
 
     return { prospects: [], error: message };
   }
-}
+});

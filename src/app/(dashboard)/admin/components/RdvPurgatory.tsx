@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import {
@@ -18,6 +17,7 @@ import { convertDeal, validateRDV } from "@/app/actions/rdv-actions";
 import { RdvRejectDialog } from "@/components/admin/rdv-reject-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { useAdminData } from "@/contexts/admin-data-context";
 import { useToast } from "@/hooks/use-toast";
 import { COMMISSION_RATE, formatEuro } from "@/lib/bounty-stats";
 import { getProfileDisplayName } from "@/lib/profile-utils";
@@ -42,7 +42,7 @@ function RdvStatusBadge({ status }: { status: RdvStatus }) {
 }
 
 export function RdvPurgatory({ prospects, prospecteurs }: RdvPurgatoryProps) {
-  const router = useRouter();
+  const { refreshSharedData } = useAdminData();
   const { toast } = useToast();
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [closingId, setClosingId] = useState<string | null>(null);
@@ -84,7 +84,7 @@ export function RdvPurgatory({ prospects, prospecteurs }: RdvPurgatoryProps) {
       if (!result.ok) {
         setErrors((prev) => ({ ...prev, [prospectId]: result.error ?? "Erreur." }));
       } else {
-        router.refresh();
+        void refreshSharedData();
       }
       setPendingId(null);
     });
@@ -120,7 +120,7 @@ export function RdvPurgatory({ prospects, prospecteurs }: RdvPurgatoryProps) {
           description: `${entreprise} — ${formatEuro(commission)} crédités au prospecteur.`,
           duration: 7000,
         });
-        router.refresh();
+        void refreshSharedData();
       }
       setClosingId(null);
     });
@@ -137,7 +137,7 @@ export function RdvPurgatory({ prospects, prospecteurs }: RdvPurgatoryProps) {
         entreprise={rejectTarget?.entreprise}
         onSuccess={() => {
           setRejectTarget(null);
-          router.refresh();
+          void refreshSharedData();
         }}
         onError={(message) => {
           if (rejectTarget) {

@@ -184,6 +184,7 @@ export function DashboardShell({ children, profile }: DashboardShellProps) {
                 <Link
                   key={item.label}
                   href={item.disabled ? "#" : item.href}
+                  prefetch
                   aria-label={item.label}
                   aria-current={active ? "page" : undefined}
                   className={cn(
@@ -283,6 +284,7 @@ export function DashboardShell({ children, profile }: DashboardShellProps) {
                     <Link
                       key={item.label}
                       href={item.href}
+                      prefetch
                       className={cn(
                         "flex size-9 items-center justify-center rounded-lg",
                         active

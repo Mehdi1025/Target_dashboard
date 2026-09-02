@@ -1,10 +1,12 @@
+import { cache } from "react";
+
 import { createClient } from "@/lib/supabase/server";
 import type { OrphanProspectItem } from "@/types/database.types";
 
-export async function getOrphanProspects(): Promise<{
+export const getOrphanProspects = cache(async (): Promise<{
   orphans: OrphanProspectItem[];
   error: string | null;
-}> {
+}> => {
   try {
     const supabase = await createClient();
     const { data, error } = await supabase
@@ -23,4 +25,4 @@ export async function getOrphanProspects(): Promise<{
       error instanceof Error ? error.message : "Impossible de charger les leads orphelins.";
     return { orphans: [], error: message };
   }
-}
+});

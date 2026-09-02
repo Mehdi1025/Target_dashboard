@@ -1,10 +1,12 @@
+import { cache } from "react";
+
 import { createClient } from "@/lib/supabase/server";
 import type { ProfileRow } from "@/types/database.types";
 
-export async function getProspecteurs(): Promise<{
+export const getProspecteurs = cache(async (): Promise<{
   prospecteurs: ProfileRow[];
   error: string | null;
-}> {
+}> => {
   try {
     const supabase = await createClient();
     const { data, error } = await supabase
@@ -23,4 +25,4 @@ export async function getProspecteurs(): Promise<{
       error instanceof Error ? error.message : "Impossible de charger les prospecteurs.";
     return { prospecteurs: [], error: message };
   }
-}
+});
