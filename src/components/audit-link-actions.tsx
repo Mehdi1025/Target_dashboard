@@ -115,19 +115,9 @@ export function AuditLinkActions({
 
   if (variant === "inline") {
     return (
-      <div className="flex flex-wrap items-center gap-2">
-        <Button variant="outline" size="sm" onClick={handleCopy}>
-          {copied ? "Copié !" : "Copier le lien"}
-        </Button>
-        <Link
-          href={`/audit/${slug}`}
-          target="_blank"
-          prefetch={false}
-          className={cn(buttonVariants({ variant: "ghost", size: "sm" }))}
-        >
-          Ouvrir
-        </Link>
-      </div>
+      <Button variant="outline" size="sm" onClick={handleCopy}>
+        {copied ? "Copié !" : "Copier le lien audit"}
+      </Button>
     );
   }
 

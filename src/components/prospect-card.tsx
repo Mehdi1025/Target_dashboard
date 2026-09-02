@@ -111,8 +111,6 @@ export function ProspectCard({ prospect, profileId, onProspectPatch }: ProspectC
     onProspectPatch?.(prospect.id, patch);
   }
 
-  const showCallQualification = rdvStatus === "NONE" && Boolean(profileId);
-
   return (
     <article className="glass-panel card-hover-lift group flex h-full flex-col rounded-2xl p-5">
       <div className="flex items-start justify-between gap-4">
@@ -121,13 +119,9 @@ export function ProspectCard({ prospect, profileId, onProspectPatch }: ProspectC
             {getInitials(prospect.entreprise) || "?"}
           </div>
           <div className="min-w-0">
-            <Link
-              href={`/prospects/${prospect.id}`}
-              prefetch
-              className="block truncate text-base font-semibold tracking-tight text-foreground transition-colors duration-150 group-hover:text-primary"
-            >
+            <p className="truncate text-base font-semibold tracking-tight text-foreground">
               {prospect.entreprise}
-            </Link>
+            </p>
             <p className="mt-0.5 flex items-center gap-1.5 truncate text-xs text-muted-foreground">
               <Building2 className="size-3 shrink-0" />
               {formatValue(prospect.poste)}
@@ -169,7 +163,7 @@ export function ProspectCard({ prospect, profileId, onProspectPatch }: ProspectC
       </div>
 
       <div className="mt-auto space-y-3 border-t border-border/60 pt-4">
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <ProspectCallActions
             prospectId={prospect.id}
             entreprise={prospect.entreprise}
@@ -185,11 +179,10 @@ export function ProspectCard({ prospect, profileId, onProspectPatch }: ProspectC
             prefetch
             className={cn(
               buttonVariants({ variant: "outline", size: "sm" }),
-              "gap-1 text-muted-foreground hover:text-foreground",
-              !showCallQualification && rdvStatus !== "REJECTED" && "ml-auto"
+              "ml-auto gap-1.5"
             )}
           >
-            Voir la fiche
+            Ouvrir la fiche
             <ArrowUpRight className="size-3.5" />
           </Link>
         </div>
