@@ -17,6 +17,7 @@ import type {
   AdminRdvCalendarDay,
 } from "@/lib/admin-calendar-shared";
 import { getProfileDisplayName } from "@/lib/profile-utils";
+import { buildProspectHref } from "@/lib/admin-navigation";
 import { getRdvBadgeClass, RDV_STATUS_LABELS } from "@/lib/rdv-utils";
 import { cn } from "@/lib/utils";
 import type { ProfileRow } from "@/types/database.types";
@@ -72,7 +73,14 @@ function CalendarRdvRow({
           <span className="font-mono text-sm font-bold text-foreground">
             {format(parseISO(item.rdv_date), "HH:mm", { locale: fr })}
           </span>
-          <span className="font-semibold">{item.entreprise}</span>
+          <span className="font-semibold">
+            <Link
+              href={buildProspectHref(item.id, "/admin")}
+              className="transition-colors hover:text-amber-700 hover:underline"
+            >
+              {item.entreprise}
+            </Link>
+          </span>
           {item.ia_score !== null ? (
             <span className="rounded-full bg-primary/10 px-2 py-0.5 font-mono text-[10px] font-bold text-primary">
               {item.ia_score}
@@ -125,13 +133,19 @@ function CalendarRdvRow({
           </>
         ) : null}
         <Link
+          href={buildProspectHref(item.id, "/admin")}
+          className={cn(buttonVariants({ variant: "ghost", size: "sm" }))}
+        >
+          Lead
+        </Link>
+        <Link
           href={`/admin/prospecteurs/${item.assigned_to ?? ""}`}
           className={cn(
             buttonVariants({ variant: "ghost", size: "sm" }),
             !item.assigned_to && "pointer-events-none opacity-40"
           )}
         >
-          Fiche
+          Prospecteur
         </Link>
       </div>
     </div>

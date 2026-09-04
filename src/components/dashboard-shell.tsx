@@ -73,6 +73,13 @@ const ADMIN_NAV: NavItem[] = [
       pathname === "/admin",
   },
   {
+    href: "/admin/leads",
+    label: "Leads",
+    icon: LayoutGrid,
+    isActive: (pathname) =>
+      pathname.startsWith("/admin/leads") || pathname.startsWith("/prospects/"),
+  },
+  {
     href: "/admin/controle",
     label: "Contrôle",
     icon: Radio,
@@ -115,6 +122,12 @@ function getHeaderLabel(pathname: string, isAdmin: boolean) {
     }
     if (pathname.startsWith("/admin/prospecteurs/")) {
       return "Admin · Fiche prospecteur";
+    }
+    if (pathname.startsWith("/admin/leads")) {
+      return "Admin · Leads";
+    }
+    if (pathname.startsWith("/prospects/")) {
+      return "Admin · Fiche lead";
     }
     if (pathname.startsWith("/admin")) {
       return "Admin · Centre de commande";

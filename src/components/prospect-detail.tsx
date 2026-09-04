@@ -24,9 +24,18 @@ import type { RdvRejectionReason, RdvStatus } from "@/types/database.types";
 type ProspectDetailViewProps = {
   prospect: ProspectDetailCore;
   profileId?: string;
+  backHref?: string;
+  backLabel?: string;
+  isAdminView?: boolean;
 };
 
-export function ProspectDetailView({ prospect, profileId }: ProspectDetailViewProps) {
+export function ProspectDetailView({
+  prospect,
+  profileId,
+  backHref = "/",
+  backLabel = "Retour pipeline",
+  isAdminView = false,
+}: ProspectDetailViewProps) {
   const [copied, setCopied] = useState(false);
   const [activeTab, setActiveTab] = useState("overview");
   const [statut, setStatut] = useState(prospect.statut);
@@ -92,7 +101,14 @@ export function ProspectDetailView({ prospect, profileId }: ProspectDetailViewPr
 
   return (
     <div className="mx-auto flex max-w-[1400px] flex-col gap-8 lg:gap-12">
-        <ProspectDetailHero prospect={prospect} statut={statut} rdvStatus={rdvStatus} />
+        <ProspectDetailHero
+          prospect={prospect}
+          statut={statut}
+          rdvStatus={rdvStatus}
+          backHref={backHref}
+          backLabel={backLabel}
+          isAdminView={isAdminView}
+        />
 
         <div className="grid gap-8 xl:grid-cols-[1fr_300px] xl:gap-10">
           <div className="min-w-0 space-y-8">

@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
+import Link from "next/link";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import {
@@ -19,6 +20,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useAdminData } from "@/contexts/admin-data-context";
 import { useToast } from "@/hooks/use-toast";
+import { buildProspectHref } from "@/lib/admin-navigation";
 import { COMMISSION_RATE, formatEuro } from "@/lib/bounty-stats";
 import { getProfileDisplayName } from "@/lib/profile-utils";
 import { getRdvBadgeClass, RDV_STATUS_LABELS } from "@/lib/rdv-utils";
@@ -202,7 +204,14 @@ export function RdvPurgatory({ prospects, prospecteurs }: RdvPurgatoryProps) {
                         <td className="px-4 py-4 font-medium">
                           {prospecteur ? getProfileDisplayName(prospecteur) : "—"}
                         </td>
-                        <td className="px-4 py-4">{prospect.entreprise}</td>
+                        <td className="px-4 py-4">
+                          <Link
+                            href={buildProspectHref(prospect.id, "/admin")}
+                            className="font-medium transition-colors hover:text-amber-700 hover:underline"
+                          >
+                            {prospect.entreprise}
+                          </Link>
+                        </td>
                         <td className="px-4 py-4 text-muted-foreground">
                           {prospect.rdv_date
                             ? format(new Date(prospect.rdv_date), "dd MMM yyyy · HH:mm", {
@@ -319,7 +328,14 @@ export function RdvPurgatory({ prospects, prospecteurs }: RdvPurgatoryProps) {
                         <td className="px-4 py-4 font-medium">
                           {prospecteur ? getProfileDisplayName(prospecteur) : "—"}
                         </td>
-                        <td className="px-4 py-4">{prospect.entreprise}</td>
+                        <td className="px-4 py-4">
+                          <Link
+                            href={buildProspectHref(prospect.id, "/admin")}
+                            className="font-medium transition-colors hover:text-amber-700 hover:underline"
+                          >
+                            {prospect.entreprise}
+                          </Link>
+                        </td>
                         <td className="px-4 py-4">
                           <RdvStatusBadge status={prospect.rdv_status} />
                         </td>

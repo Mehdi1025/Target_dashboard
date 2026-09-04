@@ -139,7 +139,10 @@ export default async function AdminProspecteurDetailPage({
           </p>
         </div>
         {stats.total > 0 ? (
-          <ProspectsBoard prospects={prospects} />
+          <ProspectsBoard
+            prospects={prospects}
+            detailFrom={`/admin/prospecteurs/${id}`}
+          />
         ) : (
           <div className="rounded-2xl border border-dashed border-border/80 px-6 py-12 text-center text-sm text-muted-foreground">
             Aucun lead assigné à ce prospecteur pour le moment.

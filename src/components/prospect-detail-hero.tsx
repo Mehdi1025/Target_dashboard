@@ -24,6 +24,9 @@ type ProspectDetailHeroProps = {
   prospect: ProspectDetailCore;
   statut: string;
   rdvStatus: RdvStatus;
+  backHref?: string;
+  backLabel?: string;
+  isAdminView?: boolean;
 };
 
 function getInitials(entreprise: string) {
@@ -42,7 +45,14 @@ function formatDate(iso: string) {
   }).format(new Date(iso));
 }
 
-export function ProspectDetailHero({ prospect, statut, rdvStatus }: ProspectDetailHeroProps) {
+export function ProspectDetailHero({
+  prospect,
+  statut,
+  rdvStatus,
+  backHref = "/",
+  backLabel = "Retour pipeline",
+  isAdminView = false,
+}: ProspectDetailHeroProps) {
   const fullName = getFullName(prospect.prenom, prospect.nom);
 
   return (
@@ -53,14 +63,19 @@ export function ProspectDetailHero({ prospect, statut, rdvStatus }: ProspectDeta
 
       <div className="relative border-b border-border/30 px-6 py-5 lg:px-10">
         <Link
-          href="/"
+          href={backHref}
           className="group inline-flex items-center gap-2.5 text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground transition-colors hover:text-primary"
         >
           <span className="flex size-8 items-center justify-center rounded-full border border-border/60 bg-white/80 transition-transform group-hover:-translate-x-0.5">
             <ArrowLeft className="size-3.5" />
           </span>
-          Retour pipeline
+          {backLabel}
         </Link>
+        {isAdminView ? (
+          <span className="mt-3 inline-flex rounded-full border border-amber-500/30 bg-amber-500/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-wider text-amber-800">
+            Consultation admin
+          </span>
+        ) : null}
       </div>
 
       <div className="relative grid gap-10 p-6 lg:grid-cols-[1fr_auto] lg:items-end lg:p-10 lg:pb-12">

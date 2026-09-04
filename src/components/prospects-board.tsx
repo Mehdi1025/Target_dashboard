@@ -10,6 +10,7 @@ import type { ProspectListItem } from "@/types/prospect";
 type ProspectsBoardProps = {
   prospects: ProspectListItem[];
   profileId?: string;
+  detailFrom?: string;
   onProspectPatch?: (prospectId: string, patch: Partial<ProspectListItem>) => void;
 };
 
@@ -33,7 +34,12 @@ function matchesFilter(prospect: ProspectListItem, filter: FilterKey) {
   return !statut.includes("valider") && !statut.includes("approuv") && !statut.includes("envoy");
 }
 
-export function ProspectsBoard({ prospects, profileId, onProspectPatch }: ProspectsBoardProps) {
+export function ProspectsBoard({
+  prospects,
+  profileId,
+  detailFrom,
+  onProspectPatch,
+}: ProspectsBoardProps) {
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<FilterKey>("all");
 
@@ -125,6 +131,7 @@ export function ProspectsBoard({ prospects, profileId, onProspectPatch }: Prospe
               key={prospect.id}
               prospect={prospect}
               profileId={profileId}
+              detailFrom={detailFrom}
               onProspectPatch={onProspectPatch}
             />
           ))}

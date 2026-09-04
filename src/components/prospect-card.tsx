@@ -25,12 +25,14 @@ import {
   RDV_STATUS_LABELS,
 } from "@/lib/rdv-utils";
 import { cn } from "@/lib/utils";
+import { buildProspectHref } from "@/lib/admin-navigation";
 import type { ProspectListItem } from "@/types/prospect";
 import type { RdvRejectionReason, RdvStatus } from "@/types/database.types";
 
 type ProspectCardProps = {
   prospect: ProspectListItem;
   profileId?: string;
+  detailFrom?: string;
   onProspectPatch?: (prospectId: string, patch: Partial<ProspectListItem>) => void;
 };
 
@@ -81,7 +83,12 @@ function getInitials(entreprise: string) {
     .join("");
 }
 
-export function ProspectCard({ prospect, profileId, onProspectPatch }: ProspectCardProps) {
+export function ProspectCard({
+  prospect,
+  profileId,
+  detailFrom,
+  onProspectPatch,
+}: ProspectCardProps) {
   const [statut, setStatut] = useState(prospect.statut);
   const [rdvStatus, setRdvStatus] = useState<RdvStatus>(prospect.rdv_status ?? "NONE");
   const [rdvRejectionReason, setRdvRejectionReason] = useState<RdvRejectionReason | null>(
@@ -224,7 +231,7 @@ export function ProspectCard({ prospect, profileId, onProspectPatch }: ProspectC
               />
 
               <Link
-                href={`/prospects/${prospect.id}`}
+                href={buildProspectHref(prospect.id, detailFrom)}
                 prefetch
                 className={cn(
                   buttonVariants({ variant: "outline", size: "sm" }),

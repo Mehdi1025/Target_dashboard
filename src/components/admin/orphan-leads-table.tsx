@@ -1,14 +1,19 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { UserPlus } from "lucide-react";
+import Link from "next/link";
+import { ExternalLink, UserPlus } from "lucide-react";
 
 import { assignProspectAction } from "@/app/actions/admin";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { useAdminData } from "@/contexts/admin-data-context";
 import { useToast } from "@/hooks/use-toast";
+import { buildProspectHref } from "@/lib/admin-navigation";
 import { getProfileDisplayName } from "@/lib/profile-utils";
+import { cn } from "@/lib/utils";
+
+const BACK_FROM = "/admin";
 
 export function OrphanLeadsTable() {
   const { orphans, prospecteurs, markOrphanAssigned } = useAdminData();
@@ -82,6 +87,7 @@ export function OrphanLeadsTable() {
               <th className="px-4 py-3">Score</th>
               <th className="px-4 py-3">Statut</th>
               <th className="px-4 py-3">Assigner à</th>
+              <th className="px-4 py-3">Fiche</th>
               <th className="px-4 py-3" />
             </tr>
           </thead>
@@ -95,7 +101,14 @@ export function OrphanLeadsTable() {
                   key={orphan.id}
                   className="border-b border-border/40 last:border-0"
                 >
-                  <td className="px-4 py-3 font-medium">{orphan.entreprise}</td>
+                  <td className="px-4 py-3 font-medium">
+                    <Link
+                      href={buildProspectHref(orphan.id, BACK_FROM)}
+                      className="transition-colors hover:text-amber-700 hover:underline"
+                    >
+                      {orphan.entreprise}
+                    </Link>
+                  </td>
                   <td className="px-4 py-3 text-muted-foreground">{orphan.email}</td>
                   <td className="px-4 py-3">
                     {orphan.ia_score !== null ? (
@@ -127,6 +140,15 @@ export function OrphanLeadsTable() {
                     {rowError ? (
                       <p className="mt-1 text-xs text-destructive">{rowError}</p>
                     ) : null}
+                  </td>
+                  <td className="px-4 py-3">
+                    <Link
+                      href={buildProspectHref(orphan.id, BACK_FROM)}
+                      className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "gap-1.5")}
+                    >
+                      <ExternalLink className="size-3.5" />
+                      Voir
+                    </Link>
                   </td>
                   <td className="px-4 py-3">
                     <Button
