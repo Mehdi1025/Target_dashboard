@@ -1,0 +1,748 @@
+% !TEX program = pdflatex
+% Target OS Dashboard — Rapport complet (état au 5 septembre 2026)
+% Compilation : pdflatex rapport-target-os-complet-2026.tex (2 passes)
+\documentclass[11pt,a4paper]{report}
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[french]{babel}
+\usepackage{geometry}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{hyperref}
+\usepackage{xcolor}
+\usepackage{enumitem}
+\usepackage{listings}
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+\usepackage{tikz}
+\usetikzlibrary{shapes.geometric, arrows.meta, positioning, fit, backgrounds}
+
+\geometry{margin=2.2cm}
+\hypersetup{
+  colorlinks=true,
+  linkcolor=blue!60!black,
+  urlcolor=blue!70!black,
+  pdftitle={Target OS Dashboard --- Rapport complet 2026},
+  pdfauthor={Target OS / Target Agency}
+}
+
+\definecolor{codebg}{RGB}{245,245,250}
+\definecolor{admincolor}{RGB}{217,119,6}
+\definecolor{proscolor}{RGB}{124,58,237}
+\definecolor{accent}{RGB}{37,99,235}
+
+\lstset{
+  basicstyle=\ttfamily\small,
+  backgroundcolor=\color{codebg},
+  frame=single,
+  breaklines=true,
+  columns=fullflexible,
+  rulecolor=\color{gray!40}
+}
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small\textbf{Target OS Dashboard}}
+\fancyhead[R]{\small Rapport complet --- Septembre 2026}
+\fancyfoot[C]{\thepage}
+
+\titleformat{\chapter}{\normalfont\huge\bfseries\color{accent}}{\thechapter}{1em}{}
+\titleformat{\section}{\normalfont\Large\bfseries}{\thesection}{1em}{}
+
+\begin{document}
+
+% ===========================================================================
+\title{
+  \vspace{1.5cm}
+  {\Huge\textbf{Target OS Dashboard}}\\[0.6cm]
+  {\LARGE Rapport détaillé --- Architecture, fonctionnalités \& méthode de fonctionnement}\\[0.4cm]
+  {\large CRM B2B multi-utilisateurs --- Prospection IA + Admin + Commissions}\\[0.8cm]
+  {\normalsize État du projet au 5 septembre 2026}
+}
+\author{Target Agency}
+\date{}
+\maketitle
+\thispagestyle{empty}
+
+\tableofcontents
+\newpage
+
+% ===========================================================================
+\chapter{Résumé exécutif}
+% ===========================================================================
+
+\textbf{Target OS Dashboard} est un CRM B2B de prospection commerciale. Il connecte trois piliers :
+
+\begin{enumerate}[noitemsep]
+  \item \textbf{n8n} --- ingestion et enrichissement IA des leads dans Supabase ;
+  \item \textbf{Prospecteurs} --- traitement opérationnel (appels, RDV, notes, audit client) ;
+  \item \textbf{Admin} --- supervision, assignation des orphelins, validation RDV, clôture deals et commissions.
+\end{enumerate}
+
+L'application est déployée en \textbf{Next.js 16} (App Router) avec authentification Supabase SSR, Row Level Security PostgreSQL, et mises à jour temps réel sur les tables \texttt{prospects} et \texttt{prospector\_logs}.
+
+\section{Chiffres clés du modèle métier}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{@{}ll@{}}
+\toprule
+\textbf{Paramètre} & \textbf{Valeur} \\
+\midrule
+Quota RDV hebdomadaire (prospecteur) & 15 RDV validés / semaine \\
+Bonus volume (quota atteint) & 100\,€ \\
+Taux de commission sur deal closé & 10\,\% du montant contrat \\
+Rôles utilisateur & \texttt{admin} | \texttt{prospecteur} \\
+Lead orphelin & \texttt{assigned\_to IS NULL} (n8n, non assigné) \\
+Statuts RDV & \texttt{NONE}, \texttt{PENDING}, \texttt{VALIDATED}, \texttt{REJECTED} \\
+Motifs rejet RDV & \texttt{INJOIGNABLE}, \texttt{PAS\_INTERESSE}, \texttt{FAUX\_NUMERO} \\
+\bottomrule
+\end{tabular}
+\caption{Constantes métier (\texttt{src/lib/bounty-stats.ts})}
+\end{table}
+
+% ===========================================================================
+\chapter{Stack technique}
+% ===========================================================================
+
+\section{Frontend \& framework}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{@{}lll@{}}
+\toprule
+\textbf{Couche} & \textbf{Technologie} & \textbf{Version} \\
+\midrule
+Framework & Next.js (App Router, Turbopack) & 16.3.2 \\
+UI & React & 19.2.8 \\
+Langage & TypeScript & 5.x \\
+Styles & Tailwind CSS & 4.x \\
+Composants & shadcn/ui (style base-nova) & 4.19.0 \\
+Icônes & lucide-react & 1.34.0 \\
+Dates & date-fns (locale FR) & 4.4.0 \\
+Polices & Plus Jakarta Sans, Geist Mono & --- \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Backend \& données}
+
+\begin{itemize}[noitemsep]
+  \item \textbf{Supabase} : Auth, PostgreSQL, Realtime, RLS (\texttt{@supabase/ssr}, \texttt{@supabase/supabase-js})
+  \item \textbf{Google Calendar API} (\texttt{googleapis}) --- OAuth admin + réservation externe (lien public)
+  \item \textbf{Tawk.to} --- chat widget sur pages audit publiques (\texttt{/audit/[slug]})
+\end{itemize}
+
+\section{Dépendances présentes mais non utilisées dans le code applicatif}
+
+Mapbox, Deck.gl, react-map-gl --- installés dans \texttt{package.json} mais aucun import dans \texttt{src/}. Réservés à une évolution cartographique future.
+
+% ===========================================================================
+\chapter{Rôles, sécurité et accès}
+% ===========================================================================
+
+\section{Deux rôles distincts}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{@{}p{3cm}p{5cm}p{6cm}@{}}
+\toprule
+\textbf{Rôle} & \textbf{Espace} & \textbf{Périmètre données} \\
+\midrule
+\textcolor{admincolor}{\textbf{admin}} &
+\texttt{/admin/*} &
+Tous les prospects, toute l'équipe, finance, stats, orphelins \\
+\textcolor{proscolor}{\textbf{prospecteur}} &
+\texttt{/}, \texttt{/prospecteur/*}, \texttt{/prospects/[id]} &
+Uniquement les leads où \texttt{assigned\_to = son UUID} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Middleware Next.js}
+
+Fichier : \texttt{src/lib/supabase/middleware.ts}
+
+\begin{itemize}[noitemsep]
+  \item Non authentifié $\rightarrow$ redirection \texttt{/login} (sauf \texttt{/audit/*}, \texttt{/login})
+  \item Admin sur \texttt{/} ou \texttt{/prospecteur} $\rightarrow$ \texttt{/admin}
+  \item Non-admin sur \texttt{/admin/*} $\rightarrow$ \texttt{/}
+  \item Session rafraîchie via cookies Supabase SSR
+\end{itemize}
+
+\section{Row Level Security (PostgreSQL)}
+
+Migration principale : \texttt{supabase/migrations/migration-multi-users.sql}
+
+\subsection{Table \texttt{profiles}}
+\begin{itemize}[noitemsep]
+  \item Liée à \texttt{auth.users} ; création auto via trigger \texttt{handle\_new\_user()}
+  \item Admin : lecture/écriture globale ; Prospecteur : lecture/MAJ de son propre profil (sans changer le rôle)
+\end{itemize}
+
+\subsection{Table \texttt{prospects}}
+\begin{itemize}[noitemsep]
+  \item \textbf{Admin} : SELECT, INSERT, UPDATE, DELETE sur tout
+  \item \textbf{Prospecteur authentifié} : SELECT/UPDATE si \texttt{assigned\_to = auth.uid()}
+  \item \textbf{Anonyme (n8n)} : INSERT orphelin (\texttt{assigned\_to IS NULL}) ; UPDATE orphelin ; SELECT si \texttt{slug IS NOT NULL} (audit public)
+\end{itemize}
+
+\subsection{Table \texttt{prospector\_logs} (ECG Commercial)}
+\begin{itemize}[noitemsep]
+  \item Prospecteur : INSERT (sur son \texttt{profile\_id})
+  \item Admin : SELECT (feed temps réel)
+\end{itemize}
+
+% ===========================================================================
+\chapter{Cartographie des routes}
+% ===========================================================================
+
+\section{Routes publiques}
+
+\begin{longtable}{@{}p{4.5cm}p{9cm}@{}}
+\toprule
+\textbf{Route} & \textbf{Description} \\
+\midrule
+\endhead
+\texttt{/login} & Connexion email / mot de passe Supabase \\
+\texttt{/audit/[slug]} & Rapport brand HTML public (sans auth). Widget Tawk.to + trigger Sniper sur section faiblesses \\
+\bottomrule
+\end{longtable}
+
+\section{Espace prospecteur (authentifié)}
+
+\begin{longtable}{@{}p{4.5cm}p{9cm}@{}}
+\toprule
+\textbf{Route} & \textbf{Contenu} \\
+\midrule
+\endhead
+\texttt{/} & \textbf{Pipeline personnel} --- Ma Journée, Bounty Tracker, KPIs, grille de cartes leads \\
+\texttt{/prospecteur/mission} & \textbf{Mission Queue} --- file d'actions priorisées (qualifier, RDV, closing) \\
+\texttt{/prospecteur/briefing} & \textbf{Salle de Briefing} --- préparation focus un lead à la fois \\
+\texttt{/prospecteur} & \textbf{Mes stats} --- performance individuelle \\
+\texttt{/prospects/[id]} & \textbf{Fiche lead} --- dossier complet, notes, script email, rapport brand \\
+\bottomrule
+\end{longtable}
+
+\section{Espace admin (authentifié, rôle admin)}
+
+\begin{longtable}{@{}p{4.5cm}p{9cm}@{}}
+\toprule
+\textbf{Route} & \textbf{Contenu} \\
+\midrule
+\endhead
+\texttt{/admin} & \textbf{Centre de commande} --- Oracle, KPIs, Purgatoire RDV, ECG live, équipe, orphelins \\
+\texttt{/admin/leads} & \textbf{Catalogue leads} --- recherche, fiches consultables (mode lecture admin) \\
+\texttt{/admin/controle} & \textbf{Tour de contrôle} --- alertes urgentes (RDV retard, orphelins, inactivité) \\
+\texttt{/admin/equipe} & \textbf{Team Pulse} --- statut live prospecteurs + fiches équipe \\
+\texttt{/admin/statistiques} & \textbf{Statistiques globales} --- funnel pipeline, conversion, qualité IA \\
+\texttt{/admin/finance} & \textbf{Money Command} --- commissions, bonus volume, projections \\
+\texttt{/admin/prospecteurs/[id]} & \textbf{Fiche prospecteur} --- KPIs + pipeline assigné \\
+\texttt{/admin/creneaux} & Redirige vers \texttt{/admin} (legacy ; UI créneaux/OAuth non montée) \\
+\bottomrule
+\end{longtable}
+
+% ===========================================================================
+\chapter{Fonctionnalités détaillées --- Prospecteur}
+% ===========================================================================
+
+\section{Pipeline (\texttt{/})}
+
+Composants : \texttt{prospector-pipeline.tsx}, \texttt{ma-journee.tsx}, \texttt{BountyTracker.tsx}, \texttt{prospects-board.tsx}
+
+\subsection{Ma Journée}
+Colonnes de priorité quotidienne calculées par \texttt{src/lib/ma-journee.ts} :
+\begin{itemize}[noitemsep]
+  \item Leads chauds (score IA élevé)
+  \item À traiter en priorité
+  \item RDV en attente de validation admin
+  \item Relances closing
+\end{itemize}
+
+\subsection{Bounty Tracker}
+Affiche en temps réel (\texttt{computeBountyStats}) :
+\begin{itemize}[noitemsep]
+  \item RDV \texttt{VALIDATED} de la semaine en cours vs objectif 15
+  \item Barre de progression + déblocage bonus 100\,€
+  \item Commissions cumulées (\texttt{commission\_earned})
+  \item Compteurs PENDING / REJECTED
+\end{itemize}
+
+\subsection{Cartes leads}
+Chaque \texttt{ProspectCard} expose :
+\begin{itemize}[noitemsep]
+  \item Score IA (anneau visuel), statut pipeline, badge RDV
+  \item Actions d'appel : NRP, Échange, Refus (via \texttt{ProspectCallActions})
+  \item Réservation RDV Google Calendar externe
+  \item Lien vers fiche détaillée + actions audit (génération slug, copie lien)
+\end{itemize}
+
+\subsection{Temps réel}
+Hook \texttt{use-prospects-rdv-realtime.ts} --- écoute Supabase Realtime sur UPDATE \texttt{prospects} pour mettre à jour les badges RDV sans recharger la page.
+
+\section{Mission Queue (\texttt{/prospecteur/mission})}
+
+File d'actions ordonnée par \texttt{src/lib/mission-queue.ts} :
+\begin{enumerate}[noitemsep]
+  \item Qualifier l'appel (disposition NRP / Échange / Refus)
+  \item Déclarer un RDV (Google Calendar)
+  \item Suivre un closing (lead VALIDATED non converti)
+\end{enumerate}
+
+\section{Salle de Briefing (\texttt{/prospecteur/briefing})}
+
+Mode focus : un lead à la fois avec forces, faiblesses, proposition commerciale, script email --- préparation avant appel.
+
+\section{Fiche lead (\texttt{/prospects/[id]})}
+
+\subsection{Onglet Dossier}
+\begin{itemize}[noitemsep]
+  \item Notes prospecteur (PATCH \texttt{/api/prospects/[id]/notes})
+  \item Identité + enrichissement entreprise
+  \item Analyse IA du site
+  \item Script email copiable (outreach personnalisé)
+\end{itemize}
+
+\subsection{Onglet Rapport}
+Preview du rapport brand HTML (\texttt{/api/prospects/[id]/report}) --- même contenu que la page publique \texttt{/audit/[slug]}.
+
+\subsection{Actions sidebar}
+\begin{itemize}[noitemsep]
+  \item Qualifier l'appel (si \texttt{rdv\_status = NONE})
+  \item Réserver RDV $\rightarrow$ ouvre lien Google Calendar + passe en \texttt{PENDING}
+  \item Copier email IA, visiter site, ouvrir audit client
+\end{itemize}
+
+\section{Banner RDV}
+\texttt{rdv-calendar-notice.tsx} --- bandeau prospecteur : « RDV avec Adam · Target Agency » + lien booking configurable.
+
+% ===========================================================================
+\chapter{Fonctionnalités détaillées --- Admin}
+% ===========================================================================
+
+\section{Centre de commande (\texttt{/admin})}
+
+Données partagées via \texttt{AdminDataProvider} (\texttt{admin-data-context.tsx}) :
+prospects, prospecteurs, orphelins --- chargement client non bloquant.
+
+\subsection{Oracle Admin Panel}
+Insights automatiques (\texttt{src/lib/oracle-admin.ts}) : anomalies, opportunités, actions recommandées.
+
+\subsection{KPI Panel}
+Vue agrégée (\texttt{computeAdminOverview}) : prospecteurs actifs, leads assignés, orphelins, conversion globale.
+
+\subsection{Purgatoire RDV (\texttt{RdvPurgatory.tsx})}
+Deux volets :
+\begin{enumerate}
+  \item \textbf{RDV PENDING} --- Valider / Rejeter (avec motif) / Reporter la date
+  \item \textbf{RDV VALIDATED non convertis} --- Saisie montant deal $\rightarrow$ clôture + commission 10\,\%
+\end{enumerate}
+Agenda J-1 : \texttt{admin-rdv-calendar.tsx} (RDV du lendemain + retards).
+
+\subsection{ECG Commercial (\texttt{live-activity-feed.tsx})}
+Feed temps réel des micro-actions prospecteurs (table \texttt{prospector\_logs}) :
+consultation fiche, copie email, disposition appel, ouverture rapport, alerte sniper\ldots
+
+\subsection{Leads orphelins (\texttt{orphan-leads-table.tsx})}
+\begin{itemize}[noitemsep]
+  \item Liste des leads \texttt{assigned\_to IS NULL} (entrée n8n)
+  \item Assignation manuelle à un prospecteur
+  \item Mise à jour UI instantanée (\texttt{markOrphanAssigned}) sans rechargement
+  \item Lien vers fiche lead (consultation admin)
+\end{itemize}
+
+\subsection{Gestion prospecteurs}
+Tableau avec stats par membre + lien vers fiche individuelle.
+
+\section{Catalogue Leads (\texttt{/admin/leads})}
+
+Table searchable de \textbf{tous} les prospects :
+entreprise, email, score, statut, prospecteur assigné, bouton Fiche.
+Mode consultation admin (pas d'actions prospecteur).
+
+\section{Tour de contrôle (\texttt{/admin/controle})}
+
+Alertes calculées (\texttt{src/lib/control-tower.ts}) :
+\begin{itemize}[noitemsep]
+  \item RDV PENDING en retard (date passée)
+  \item Leads orphelins non assignés
+  \item Prospecteurs sous quota / inactifs (ECG)
+  \item Liens d'action vers pages concernées
+\end{itemize}
+
+\section{Équipe (\texttt{/admin/equipe})}
+
+\begin{itemize}[noitemsep]
+  \item \textbf{Team Pulse} --- statut live (dernière action, lead en cours)
+  \item \textbf{Fiches grid} --- accès rapide \texttt{/admin/prospecteurs/[id]}
+\end{itemize}
+
+\section{Statistiques (\texttt{/admin/statistiques})}
+
+\begin{itemize}[noitemsep]
+  \item Funnel Pipeline Flow (\texttt{pipeline-flow.ts}) : n8n $\rightarrow$ assignés $\rightarrow$ approuvés $\rightarrow$ RDV déclarés $\rightarrow$ validés $\rightarrow$ convertis
+  \item Taux de conversion global et par étape
+  \item Goulots d'étranglement détectés automatiquement
+  \item Répartition RDV (NONE / PENDING / VALIDATED / REJECTED)
+  \item Stats par prospecteur
+\end{itemize}
+
+\section{Finance (\texttt{/admin/finance})}
+
+\texttt{money-command-panel.tsx} + \texttt{src/lib/money-command.ts} :
+\begin{itemize}[noitemsep]
+  \item Commissions totales et par prospecteur
+  \item Projection bonus volume (100\,€ si quota 15 RDV/semaine)
+  \item Liste des deals closés (\texttt{deal\_amount}, \texttt{commission\_earned})
+\end{itemize}
+
+\section{Consultation fiche lead (admin)}
+
+Route \texttt{/prospects/[id]?from=/admin/leads} :
+\begin{itemize}[noitemsep]
+  \item Thème admin conservé dans le shell
+  \item Badge « Consultation admin »
+  \item Retour contextuel vers la page admin d'origine
+  \item Pas d'actions prospecteur (qualification / RDV masquées)
+\end{itemize}
+
+% ===========================================================================
+\chapter{Méthode de fonctionnement --- Flux métier}
+% ===========================================================================
+
+\section{Vue d'ensemble du pipeline}
+
+\begin{center}
+\begin{tikzpicture}[
+  node distance=0.55cm and 0.25cm,
+  flowstep/.style={
+    rectangle,
+    rounded corners=4pt,
+    draw=accent!60,
+    fill=accent!8,
+    minimum width=2cm,
+    minimum height=0.85cm,
+    align=center,
+    font=\small
+  },
+  arr/.style={-{Stealth[length=2mm]}, thick, accent!70}
+]
+  \node[flowstep] (n8n) {n8n\\ingestion};
+  \node[flowstep, right=of n8n] (orph) {Orphelin};
+  \node[flowstep, right=of orph] (assign) {Assigné};
+  \node[flowstep, right=of assign] (call) {Qualif.\\appel};
+  \node[flowstep, right=of call] (rdv) {RDV\\PENDING};
+  \node[flowstep, right=of rdv] (valid) {VALIDATED};
+  \node[flowstep, right=of valid] (deal) {Deal\\+ 10\%};
+
+  \draw[arr] (n8n) -- (orph);
+  \draw[arr] (orph) -- (assign);
+  \draw[arr] (assign) -- (call);
+  \draw[arr] (call) -- (rdv);
+  \draw[arr] (rdv) -- (valid);
+  \draw[arr] (valid) -- (deal);
+\end{tikzpicture}
+\end{center}
+
+\section{Étape 1 --- Ingestion n8n}
+
+\begin{enumerate}
+  \item n8n reçoit ou génère un lead (Google Sheets, scraping, IA\ldots)
+  \item Insert dans \texttt{public.prospects} avec \texttt{assigned\_to = NULL}
+  \item Champs typiques : identité, entreprise, \texttt{ia\_score}, \texttt{forces}, \texttt{faiblesses}, \texttt{script\_email}, \texttt{slug}, \texttt{html\_rapport}
+  \item Statut initial : \texttt{À valider}
+  \item Recommandation prod : clé \textbf{service role} Supabase dans n8n
+\end{enumerate}
+
+Script n8n : \texttt{n8n/generate-brand-report.js} --- génère HTML audit style Awwards avec \texttt{data-audit-section="faiblesses"} pour le trigger Sniper.
+
+\section{Étape 2 --- Assignation admin}
+
+\begin{enumerate}
+  \item Admin voit l'orphelin dans le Centre de commande
+  \item Sélectionne un prospecteur + « Assigner »
+  \item Server Action \texttt{assignProspectAction} $\rightarrow$ \texttt{assigned\_to = UUID prospecteur}
+  \item UI optimiste : ligne disparaît immédiatement
+  \item Prospecteur voit le lead dans son pipeline (RLS)
+\end{enumerate}
+
+\section{Étape 3 --- Qualification d'appel}
+
+Prospecteur sur fiche ou carte :
+\begin{itemize}[noitemsep]
+  \item \textbf{NRP} $\rightarrow$ statut « NRP »
+  \item \textbf{Échange} $\rightarrow$ statut « Échange »
+  \item \textbf{Refus} $\rightarrow$ statut « Refus » (archivage)
+\end{itemize}
+Action : \texttt{updateCallDisposition} + log ECG \texttt{CALL\_DISPOSITION}.
+
+\section{Étape 4 --- Déclaration RDV}
+
+\textbf{Mode actuel (production)} --- lien Google Calendar externe :
+\begin{enumerate}
+  \item Prospecteur clique « Réserver sur Google Calendar »
+  \item \texttt{declareExternalRdv} $\rightarrow$ \texttt{rdv\_status = PENDING}, \texttt{rdv\_date = null}
+  \item Onglet Google Calendar ouvert (\texttt{NEXT\_PUBLIC\_GOOGLE\_RDV\_BOOKING\_URL})
+  \item Admin valide manuellement dans le Purgatoire
+\end{enumerate}
+
+\textbf{Mode alternatif (code présent, UI admin non montée)} --- créneaux internes :
+règles \texttt{rdv\_availability\_rules} + \texttt{declareRDV(slot)} + sync Google OAuth admin.
+
+\section{Étape 5 --- Validation admin RDV}
+
+\texttt{validateRDV(prospectId, approved, reason?)} :
+\begin{itemize}[noitemsep]
+  \item \textbf{Approuvé} $\rightarrow$ \texttt{VALIDATED} ; si pas de date, \texttt{rdv\_date = now()}
+  \item \textbf{Rejeté} $\rightarrow$ \texttt{REJECTED} + motif (\texttt{rdv\_rejection\_reason})
+  \item Prospecteur notifié via Realtime + toast
+  \item RDV validé compte dans quota hebdo (15)
+\end{itemize}
+
+\section{Étape 6 --- Clôture deal \& commission}
+
+Admin saisit montant dans Purgatoire $\rightarrow$ \texttt{convertDeal(prospectId, amount)} :
+\begin{itemize}[noitemsep]
+  \item \texttt{statut = Converti}
+  \item \texttt{deal\_amount = montant}
+  \item \texttt{commission\_earned = montant $\times$ 0{,}10}
+  \item Toast confirmation + refresh données admin
+\end{itemize}
+
+\section{Étape 7 --- Audit client public (Sniper)}
+
+\begin{enumerate}
+  \item Prospecteur génère un \texttt{slug} (POST \texttt{/api/prospects/[id]/slug})
+  \item n8n remplit \texttt{html\_rapport} (ou état pending affiché)
+  \item Lien partagé : \texttt{https://[APP\_URL]/audit/[slug]}
+  \item Visiteur scroll section faiblesses $\rightarrow$ trigger Tawk.to après 15s à 60\% visibilité
+  \item \texttt{SniperProactiveBubble} --- message proactif ciblé
+\end{enumerate}
+
+% ===========================================================================
+\chapter{Schéma de base de données}
+% ===========================================================================
+
+\section{Table \texttt{prospects} (principale)}
+
+\begin{longtable}{@{}p{4cm}p{3cm}p{7cm}@{}}
+\toprule
+\textbf{Colonne} & \textbf{Type} & \textbf{Rôle} \\
+\midrule
+\endhead
+\texttt{id} & UUID PK & Identifiant lead \\
+\texttt{created\_at} & TIMESTAMPTZ & Date création \\
+\texttt{assigned\_to} & UUID FK profiles & NULL = orphelin \\
+\texttt{slug} & TEXT UNIQUE & URL audit publique \\
+\texttt{prenom, nom, email, poste} & TEXT & Contact \\
+\texttt{entreprise} & TEXT NOT NULL & Raison sociale \\
+\texttt{url, secteur, taille\_entreprise\ldots} & TEXT & Enrichissement \\
+\texttt{ia\_score} & INTEGER & Score IA /100 \\
+\texttt{analyse\_site, forces, faiblesses} & TEXT & Analyse IA \\
+\texttt{proposition\_commerciale, script\_email} & TEXT & Contenu commercial \\
+\texttt{html\_rapport} & TEXT & Rapport HTML n8n \\
+\texttt{statut} & TEXT & Pipeline (À valider, NRP, Échange\ldots) \\
+\texttt{notes} & TEXT & Notes prospecteur \\
+\texttt{rdv\_status} & TEXT & NONE|PENDING|VALIDATED|REJECTED \\
+\texttt{rdv\_date} & TIMESTAMPTZ & Date RDV \\
+\texttt{rdv\_rejection\_reason} & TEXT & Motif rejet admin \\
+\texttt{deal\_amount} & NUMERIC & Montant contrat \\
+\texttt{commission\_earned} & NUMERIC & Commission calculée \\
+\bottomrule
+\end{longtable}
+
+\section{Table \texttt{profiles}}
+
+\texttt{id}, \texttt{email}, \texttt{role}, \texttt{prenom}, \texttt{nom}, \texttt{created\_at}.
+
+\section{Table \texttt{prospector\_logs} (ECG)}
+
+\texttt{id}, \texttt{profile\_id}, \texttt{action\_type}, \texttt{prospect\_id}, \texttt{metadata} (JSONB), \texttt{created\_at}.
+
+Types d'actions : \texttt{VIEW\_LEAD}, \texttt{GENERATE\_LINK}, \texttt{COPY\_EMAIL}, \texttt{COPY\_AUDIT\_LINK}, \texttt{SAVE\_NOTES}, \texttt{OPEN\_REPORT}, \texttt{SNIPER\_ALERT}, \texttt{CALL\_DISPOSITION}, \texttt{APPROVE\_LEAD}.
+
+\section{Tables RDV avancées (migrations optionnelles)}
+
+\begin{itemize}[noitemsep]
+  \item \texttt{rdv\_availability\_rules} --- créneaux hebdomadaires admin
+  \item \texttt{rdv\_calendar\_settings} --- tokens OAuth Google, URL booking
+\end{itemize}
+
+% ===========================================================================
+\chapter{API \& Server Actions}
+% ===========================================================================
+
+\section{Server Actions principales}
+
+\begin{longtable}{@{}p{4.5cm}p{9cm}@{}}
+\toprule
+\textbf{Fichier / Action} & \textbf{Rôle} \\
+\midrule
+\endhead
+\texttt{admin.ts} --- \texttt{assignProspectAction} & Assigner orphelin à prospecteur \\
+\texttt{admin.ts} --- \texttt{signOutAction} & Déconnexion \\
+\texttt{rdv-actions.ts} --- \texttt{declareExternalRdv} & RDV via Google Calendar externe \\
+\texttt{rdv-actions.ts} --- \texttt{updateCallDisposition} & NRP / Échange / Refus \\
+\texttt{rdv-actions.ts} --- \texttt{validateRDV} & Validation / rejet admin \\
+\texttt{rdv-actions.ts} --- \texttt{convertDeal} & Clôture + commission \\
+\texttt{rdv-actions.ts} --- \texttt{rescheduleRDV} & Reporter date RDV \\
+\texttt{admin-data-actions.ts} --- \texttt{refreshAdminSharedData} & Refresh données admin \\
+\texttt{track-activity.ts} --- \texttt{trackActivity} & Log ECG Commercial \\
+\bottomrule
+\end{longtable}
+
+\section{Routes API REST}
+
+\begin{longtable}{@{}p{5cm}p{2cm}p{6.5cm}@{}}
+\toprule
+\textbf{Route} & \textbf{Méthode} & \textbf{Usage} \\
+\midrule
+\endhead
+\texttt{/api/prospects/[id]/notes} & PATCH & Sauvegarder notes \\
+\texttt{/api/prospects/[id]/slug} & POST & Générer slug audit \\
+\texttt{/api/prospects/[id]/report} & GET & Rapport HTML lazy-load \\
+\texttt{/api/prospects/[id]/statut} & PATCH & MAJ statut (UI non connectée) \\
+\texttt{/api/auth/google/calendar} & GET & Début OAuth Google \\
+\texttt{/api/auth/google/calendar/callback} & GET & Callback OAuth \\
+\bottomrule
+\end{longtable}
+
+% ===========================================================================
+\chapter{Temps réel \& notifications}
+% ===========================================================================
+
+\begin{table}[h]
+\centering
+\begin{tabular}{@{}lll@{}}
+\toprule
+\textbf{Table} & \textbf{Événement} & \textbf{Consommateur} \\
+\midrule
+\texttt{prospects} & UPDATE \texttt{rdv\_*} & Pipeline prospecteur, Mission Queue \\
+\texttt{prospector\_logs} & INSERT & ECG feed admin, Team Pulse \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Toasts utilisateur : validation RDV, rejet, commission créditée, assignation lead, erreurs actions.
+
+% ===========================================================================
+\chapter{Statistiques \& indicateurs calculés}
+% ===========================================================================
+
+\section{Prospecteur --- Bounty Stats}
+\begin{itemize}[noitemsep]
+  \item RDV validés semaine courante (lundi--dimanche, locale FR)
+  \item \texttt{progressPct = min(100, validated / 15 $\times$ 100)}
+  \item \texttt{volumeBonusUnlocked} si validated $\geq$ 15
+  \item \texttt{totalCommissions = $\sum$ commission\_earned}
+\end{itemize}
+
+\section{Admin --- Pipeline Flow}
+Étapes funnel avec % du total et chute entre étapes ; détection goulots (\texttt{bottlenecks}) ; insight textuel automatique.
+
+\section{Admin --- Control Tower}
+Score d'urgence par alerte : RDV overdue, orphelins, quota risque, inactivité ECG $>$ seuil.
+
+\section{Admin --- Oracle}
+Agrégation prospects + orphelins + dispositions du jour $\rightarrow$ recommandations actionnables avec liens.
+
+% ===========================================================================
+\chapter{Variables d'environnement}
+% ===========================================================================
+
+\begin{longtable}{@{}p{5.5cm}p{2cm}p{6.5cm}@{}}
+\toprule
+\textbf{Variable} & \textbf{Requis} & \textbf{Description} \\
+\midrule
+\endhead
+\texttt{NEXT\_PUBLIC\_SUPABASE\_URL} & Oui & URL projet Supabase \\
+\texttt{NEXT\_PUBLIC\_SUPABASE\_ANON\_KEY} & Oui & Clé anon (client + RLS) \\
+\texttt{SUPABASE\_SERVICE\_ROLE\_KEY} & Recommandé & Bypass RLS (OAuth Google, scripts) \\
+\texttt{NEXT\_PUBLIC\_APP\_URL} & Recommandé & URL prod (audit, OAuth redirect) \\
+\texttt{NEXT\_PUBLIC\_GOOGLE\_RDV\_BOOKING\_URL} & Recommandé & Lien Google Calendar Adam \\
+\texttt{NEXT\_PUBLIC\_RDV\_CALENDAR\_OWNER\_NAME} & Non & Défaut : Adam \\
+\texttt{NEXT\_PUBLIC\_RDV\_CALENDAR\_OWNER\_LABEL} & Non & Défaut : Target Agency \\
+\texttt{GOOGLE\_CLIENT\_ID / SECRET} & Optionnel & Sync calendrier OAuth admin \\
+\texttt{NEXT\_PUBLIC\_TAWK\_PROPERTY\_ID} & Optionnel & Chat Tawk.to \\
+\texttt{NEXT\_PUBLIC\_TAWK\_WIDGET\_ID} & Optionnel & Widget Tawk.to \\
+\bottomrule
+\end{longtable}
+
+% ===========================================================================
+\chapter{Architecture fichiers (extrait)}
+% ===========================================================================
+
+\begin{lstlisting}
+target-os-dashboard/
+  src/
+    app/
+      (dashboard)/          # Routes authentifiees + DashboardShell
+        admin/              # Pages admin + AdminDataProvider
+        prospecteur/        # Mission, briefing, stats
+        prospects/[id]/     # Fiche lead
+        page.tsx            # Pipeline prospecteur
+      audit/[slug]/         # Audit public
+      login/                # Auth
+      actions/              # Server Actions
+      api/                  # Routes REST
+    components/
+      admin/                # Vues admin (20+ composants)
+      ui/                   # shadcn primitives
+      *.tsx                 # Composants metier partages
+    contexts/
+      admin-data-context.tsx
+    hooks/                  # Realtime, toast, track-activity
+    lib/                    # Logique metier + clients Supabase
+    types/                  # database.types.ts (source de verite)
+  supabase/migrations/      # SQL versionne
+  n8n/                      # Scripts workflow
+  docs/                     # Documentation LaTeX
+\end{lstlisting}
+
+% ===========================================================================
+\chapter{Comptes de test}
+% ===========================================================================
+
+\begin{table}[h]
+\centering
+\begin{tabular}{@{}lll@{}}
+\toprule
+\textbf{Rôle} & \textbf{Email} & \textbf{Mot de passe} \\
+\midrule
+Admin & \texttt{admin.test@gmail.com} & \texttt{password} \\
+Prospecteur & \texttt{prospecteur.test@gmail.com} & \texttt{password} \\
+\bottomrule
+\end{tabular}
+\caption{Comptes créés dans Supabase Auth (environnement de test)}
+\end{table}
+
+% ===========================================================================
+\chapter{Points d'attention \& évolutions}
+% ===========================================================================
+
+\begin{itemize}
+  \item \textbf{/admin/creneaux} redirige vers /admin --- panneaux Google Calendar et créneaux codés mais non intégrés à l'UI
+  \item \textbf{Approbation lead} --- route API statut existe ; bouton « Approuver » legacy non branché (remplacé par qualification d'appel)
+  \item \textbf{Mapbox/Deck.gl} --- dépendances installées, non utilisées
+  \item \textbf{RLS n8n} --- en production, préférer service role key
+  \item \textbf{Vider les leads test} --- \texttt{TRUNCATE prospector\_logs; TRUNCATE prospects;} (dans cet ordre)
+\end{itemize}
+
+% ===========================================================================
+\chapter{Conclusion}
+% ===========================================================================
+
+Target OS Dashboard est un CRM B2B complet articulé autour d'un flux clair :
+\textbf{ingestion automatisée $\rightarrow$ assignation humaine $\rightarrow$ prospection qualifiée $\rightarrow$ RDV validé $\rightarrow$ conversion commissionnée}.
+
+L'architecture Next.js 16 + Supabase SSR/RLS/Realtime permet une séparation nette admin/prospecteur, une supervision temps réel (ECG Commercial), et une scalabilité via n8n pour l'alimentation et l'enrichissement IA des leads.
+
+\vspace{1cm}
+\noindent\rule{\textwidth}{0.4pt}\\
+\small\textit{Document généré pour Target Agency --- Target OS Dashboard --- Rapport complet septembre 2026.\\
+Fichier source : \texttt{docs/rapport-target-os-complet-2026.tex}}
+
+\end{document}
