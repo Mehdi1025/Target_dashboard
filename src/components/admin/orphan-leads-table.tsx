@@ -84,6 +84,7 @@ export function OrphanLeadsTable() {
             <tr className="border-b border-border/60 bg-muted/30 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
               <th className="px-4 py-3">Entreprise</th>
               <th className="px-4 py-3">Email</th>
+              <th className="px-4 py-3">Téléphone</th>
               <th className="px-4 py-3">Score</th>
               <th className="px-4 py-3">Statut</th>
               <th className="px-4 py-3">Assigner à</th>
@@ -110,6 +111,9 @@ export function OrphanLeadsTable() {
                     </Link>
                   </td>
                   <td className="px-4 py-3 text-muted-foreground">{orphan.email}</td>
+                  <td className="px-4 py-3 text-muted-foreground">
+                    {orphan.telephone ?? "—"}
+                  </td>
                   <td className="px-4 py-3">
                     {orphan.ia_score !== null ? (
                       <Badge variant="outline">{orphan.ia_score}/100</Badge>

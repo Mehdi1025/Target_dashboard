@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 const WON_LEAD_SELECT =
-  "id, entreprise, prenom, nom, email, deal_amount, notes, slug, created_at, rdv_date" as const;
+  "id, entreprise, prenom, nom, email, telephone, deal_amount, notes, slug, created_at, rdv_date" as const;
 
 export type WonLeadExport = {
   id: string;
@@ -11,6 +11,7 @@ export type WonLeadExport = {
   prenom: string | null;
   nom: string | null;
   email: string;
+  telephone: string | null;
   deal_amount: number;
   notes: string | null;
   slug: string | null;
@@ -42,6 +43,7 @@ function sortByRecentDate(rows: WonLeadRow[]): WonLeadExport[] {
       prenom: row.prenom,
       nom: row.nom,
       email: row.email,
+      telephone: row.telephone,
       deal_amount: Number(row.deal_amount),
       notes: row.notes,
       slug: row.slug,

@@ -55,6 +55,7 @@ export function ProspectsBoard({
         prospect.prenom,
         prospect.nom,
         prospect.email,
+        prospect.telephone,
         prospect.poste,
         prospect.statut,
       ]

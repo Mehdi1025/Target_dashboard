@@ -145,6 +145,7 @@ export type Database = {
           nom: string | null;
           email: string;
           poste: string | null;
+          telephone: string | null;
           entreprise: string;
           url: string | null;
           secteur: string | null;
@@ -175,6 +176,7 @@ export type Database = {
           nom?: string | null;
           email: string;
           poste?: string | null;
+          telephone?: string | null;
           entreprise: string;
           url?: string | null;
           secteur?: string | null;
@@ -205,6 +207,7 @@ export type Database = {
           nom?: string | null;
           email?: string;
           poste?: string | null;
+          telephone?: string | null;
           entreprise?: string;
           url?: string | null;
           secteur?: string | null;
@@ -315,7 +318,7 @@ export type ProspectorLogRow = Database["public"]["Tables"]["prospector_logs"]["
 export type ProspectorLogInsert = Database["public"]["Tables"]["prospector_logs"]["Insert"];
 
 export const PROSPECT_IDENTITY_FIELDS =
-  "prenom, nom, email, poste" as const;
+  "prenom, nom, email, poste, telephone" as const;
 
 export const PROSPECT_COMPANY_FIELDS =
   "entreprise, url, secteur, taille_entreprise, chiffre_affaires, annee_creation" as const;
@@ -354,6 +357,7 @@ export type ProspectListItem = Pick<
   | "nom"
   | "email"
   | "poste"
+  | "telephone"
   | "entreprise"
   | "ia_score"
   | "statut"
@@ -379,6 +383,7 @@ export type BriefingProspect = Pick<
   | "nom"
   | "email"
   | "poste"
+  | "telephone"
   | "entreprise"
   | "url"
   | "secteur"
@@ -399,5 +404,5 @@ export type BriefingProspect = Pick<
 
 export type OrphanProspectItem = Pick<
   ProspectRow,
-  "id" | "entreprise" | "email" | "ia_score" | "statut" | "created_at"
+  "id" | "entreprise" | "email" | "telephone" | "ia_score" | "statut" | "created_at"
 >;

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Copy, ExternalLink, Link2, Mail, Send } from "lucide-react";
+import { Copy, ExternalLink, Link2, Mail, Phone, Send } from "lucide-react";
 
 import { ProspectCallActions, type ProspectCallPatch } from "@/components/prospect-call-actions";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -110,6 +110,9 @@ export function ProspectDetailSidebar({
           <SummaryItem label="Entreprise" value={prospect.entreprise} />
           <SummaryItem label="Contact" value={getFullName(prospect.prenom, prospect.nom)} />
           <SummaryItem label="Email" value={prospect.email} icon={Mail} />
+          {prospect.telephone ? (
+            <SummaryItem label="Téléphone" value={prospect.telephone} icon={Phone} />
+          ) : null}
           <SummaryItem
             label="Statut"
             value={statut}

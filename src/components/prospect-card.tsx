@@ -6,6 +6,7 @@ import {
   ArrowUpRight,
   Building2,
   Mail,
+  Phone,
   Sparkles,
   User,
 } from "lucide-react";
@@ -186,6 +187,14 @@ export function ProspectCard({
             </span>
             <p className="truncate text-xs text-muted-foreground">{prospect.email}</p>
           </div>
+          {prospect.telephone ? (
+            <div className="flex items-center gap-2.5">
+              <span className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-white/80 text-muted-foreground shadow-sm ring-1 ring-border/40">
+                <Phone className="size-3.5" />
+              </span>
+              <p className="truncate text-xs text-muted-foreground">{prospect.telephone}</p>
+            </div>
+          ) : null}
         </div>
 
         <div className="mt-4 flex flex-wrap items-center gap-1.5">

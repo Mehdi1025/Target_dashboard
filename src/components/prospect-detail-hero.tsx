@@ -8,6 +8,7 @@ import {
   Globe,
   Mail,
   MapPin,
+  Phone,
   TrendingUp,
   User,
 } from "lucide-react";
@@ -131,6 +132,13 @@ export function ProspectDetailHero({
           <div className="flex flex-wrap gap-3">
             <ContactPill icon={User} label={fullName} sub={prospect.poste} />
             <ContactPill icon={Mail} label={prospect.email} />
+            {prospect.telephone ? (
+              <ContactPill
+                icon={Phone}
+                label={prospect.telephone}
+                href={`tel:${prospect.telephone.replace(/\s/g, "")}`}
+              />
+            ) : null}
             {prospect.secteur ? (
               <ContactPill icon={MapPin} label={prospect.secteur} sub="Secteur" />
             ) : null}
@@ -169,13 +177,15 @@ function ContactPill({
   icon: Icon,
   label,
   sub,
+  href,
 }: {
   icon: typeof User;
   label: string;
   sub?: string | null;
+  href?: string;
 }) {
-  return (
-    <div className="inline-flex items-center gap-3 rounded-2xl border border-border/40 bg-white/60 px-4 py-2.5 shadow-sm">
+  const content = (
+    <>
       <div className="flex size-8 items-center justify-center rounded-xl bg-primary/10 text-primary">
         <Icon className="size-3.5" />
       </div>
@@ -183,6 +193,23 @@ function ContactPill({
         <p className="truncate text-sm font-semibold text-foreground">{label}</p>
         {sub ? <p className="truncate text-[11px] text-muted-foreground">{sub}</p> : null}
       </div>
+    </>
+  );
+
+  if (href) {
+    return (
+      <a
+        href={href}
+        className="inline-flex items-center gap-3 rounded-2xl border border-border/40 bg-white/60 px-4 py-2.5 shadow-sm transition-colors hover:border-primary/30 hover:bg-white/80"
+      >
+        {content}
+      </a>
+    );
+  }
+
+  return (
+    <div className="inline-flex items-center gap-3 rounded-2xl border border-border/40 bg-white/60 px-4 py-2.5 shadow-sm">
+      {content}
     </div>
   );
 }

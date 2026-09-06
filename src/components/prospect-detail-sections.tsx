@@ -155,6 +155,15 @@ export function ProspectDetailIdentity({ prospect }: { prospect: ProspectDetailC
         <BentoTile label="Prénom" value={prospect.prenom} className="lg:col-span-1" highlight />
         <BentoTile label="Nom" value={prospect.nom} />
         <BentoTile label="Email" value={prospect.email} highlight />
+        <BentoTile
+          label="Téléphone"
+          value={prospect.telephone}
+          href={
+            prospect.telephone
+              ? `tel:${prospect.telephone.replace(/\s/g, "")}`
+              : null
+          }
+        />
         <BentoTile label="Poste" value={prospect.poste} />
         <BentoTile label="Site web" value={prospect.url} href={prospect.url} />
         <BentoTile label="Secteur" value={prospect.secteur} />

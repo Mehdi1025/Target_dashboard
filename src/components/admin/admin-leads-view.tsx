@@ -36,6 +36,7 @@ export function AdminLeadsView() {
         prospect.prenom,
         prospect.nom,
         prospect.email,
+        prospect.telephone,
         prospect.statut,
         prospecteur ? getProfileDisplayName(prospecteur) : "orphelin",
       ]
@@ -87,6 +88,7 @@ export function AdminLeadsView() {
                   <tr className="border-b border-border/60 bg-muted/30 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                     <th className="px-4 py-3">Entreprise</th>
                     <th className="px-4 py-3">Email</th>
+                    <th className="px-4 py-3">Téléphone</th>
                     <th className="px-4 py-3">Score</th>
                     <th className="px-4 py-3">Statut</th>
                     <th className="px-4 py-3">Prospecteur</th>
@@ -96,7 +98,7 @@ export function AdminLeadsView() {
                 <tbody>
                   {filtered.length === 0 ? (
                     <tr>
-                      <td colSpan={6} className="px-4 py-10 text-center text-muted-foreground">
+                      <td colSpan={7} className="px-4 py-10 text-center text-muted-foreground">
                         Aucun lead ne correspond à votre recherche.
                       </td>
                     </tr>
@@ -120,6 +122,9 @@ export function AdminLeadsView() {
                             </Link>
                           </td>
                           <td className="px-4 py-3 text-muted-foreground">{prospect.email}</td>
+                          <td className="px-4 py-3 text-muted-foreground">
+                            {prospect.telephone ?? "—"}
+                          </td>
                           <td className="px-4 py-3">
                             {prospect.ia_score !== null ? (
                               <Badge variant="outline">{prospect.ia_score}/100</Badge>

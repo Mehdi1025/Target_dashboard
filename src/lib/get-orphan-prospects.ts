@@ -11,7 +11,7 @@ export const getOrphanProspects = cache(async (): Promise<{
     const supabase = await createClient();
     const { data, error } = await supabase
       .from("prospects")
-      .select("id, entreprise, email, ia_score, statut, created_at")
+      .select("id, entreprise, email, telephone, ia_score, statut, created_at")
       .is("assigned_to", null)
       .order("created_at", { ascending: false });
 
