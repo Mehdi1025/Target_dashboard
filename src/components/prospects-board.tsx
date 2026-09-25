@@ -4,7 +4,13 @@ import { useMemo, useState } from "react";
 import { Search, SlidersHorizontal } from "lucide-react";
 
 import { ProspectCard } from "@/components/prospect-card";
-import { getProspectCountryLabel } from "@/lib/prospect-country";
+import {
+  COUNTRY_FILTERS,
+  countByCountry,
+  getProspectCountryLabel,
+  matchesCountryFilter,
+  type CountryFilterKey,
+} from "@/lib/prospect-country";
 import { cn } from "@/lib/utils";
 import type { ProspectListItem } from "@/types/prospect";
 
@@ -43,12 +49,22 @@ export function ProspectsBoard({
 }: ProspectsBoardProps) {
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<FilterKey>("all");
+  const [countryFilter, setCountryFilter] = useState<CountryFilterKey>("all");
+
+  const countryCounts = useMemo(
+    () => ({
+      ch: countByCountry(prospects, "CH"),
+      fr: countByCountry(prospects, "FR"),
+    }),
+    [prospects]
+  );
 
   const filtered = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
 
     return prospects.filter((prospect) => {
       if (!matchesFilter(prospect, filter)) return false;
+      if (!matchesCountryFilter(prospect.pays, countryFilter)) return false;
       if (!normalizedQuery) return true;
 
       const haystack = [
@@ -67,7 +83,7 @@ export function ProspectsBoard({
 
       return haystack.includes(normalizedQuery);
     });
-  }, [prospects, query, filter]);
+  }, [prospects, query, filter, countryFilter]);
 
   if (prospects.length === 0) {
     return (
@@ -101,22 +117,52 @@ export function ProspectsBoard({
           />
         </div>
 
-        <div className="flex flex-wrap gap-2">
-          {FILTERS.map((item) => (
-            <button
-              key={item.key}
-              type="button"
-              onClick={() => setFilter(item.key)}
-              className={cn(
-                "rounded-full px-4 py-2 text-xs font-semibold transition-[transform,background-color,color,box-shadow] duration-150 active:scale-95",
-                filter === item.key
-                  ? "bg-primary text-primary-foreground shadow-md shadow-primary/20"
-                  : "border border-border/80 bg-white/70 text-muted-foreground hover:border-primary/30 hover:text-foreground"
-              )}
-            >
-              {item.label}
-            </button>
-          ))}
+        <div className="flex flex-col gap-2">
+          <div className="flex flex-wrap gap-2">
+            {COUNTRY_FILTERS.map((item) => {
+              const count =
+                item.key === "CH"
+                  ? countryCounts.ch
+                  : item.key === "FR"
+                    ? countryCounts.fr
+                    : prospects.length;
+
+              return (
+                <button
+                  key={item.key}
+                  type="button"
+                  onClick={() => setCountryFilter(item.key)}
+                  className={cn(
+                    "rounded-full px-4 py-2 text-xs font-semibold transition-[transform,background-color,color,box-shadow] duration-150 active:scale-95",
+                    countryFilter === item.key
+                      ? "bg-sky-600 text-white shadow-md shadow-sky-600/20"
+                      : "border border-border/80 bg-white/70 text-muted-foreground hover:border-sky-500/30 hover:text-foreground"
+                  )}
+                >
+                  {item.label}
+                  <span className="ml-1.5 opacity-80">({count})</span>
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            {FILTERS.map((item) => (
+              <button
+                key={item.key}
+                type="button"
+                onClick={() => setFilter(item.key)}
+                className={cn(
+                  "rounded-full px-4 py-2 text-xs font-semibold transition-[transform,background-color,color,box-shadow] duration-150 active:scale-95",
+                  filter === item.key
+                    ? "bg-primary text-primary-foreground shadow-md shadow-primary/20"
+                    : "border border-border/80 bg-white/70 text-muted-foreground hover:border-primary/30 hover:text-foreground"
+                )}
+              >
+                {item.label}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 

@@ -125,7 +125,11 @@ export function ProspectCountrySelect({
 
       {editable && !localPays ? (
         <p className="mt-2 text-[11px] text-amber-700">
-          Sélectionnez le pays avant de qualifier l&apos;appel.
+          Indiquez Suisse ou France pour classer ce lead (requis avant qualification d&apos;appel).
+        </p>
+      ) : editable ? (
+        <p className="mt-2 text-[11px] text-muted-foreground">
+          Modifiez le pays si le lead est mal classé (ex. lead n8n France).
         </p>
       ) : null}
       {error ? <p className="mt-2 text-xs text-destructive">{error}</p> : null}

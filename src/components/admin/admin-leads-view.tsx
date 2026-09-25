@@ -9,7 +9,13 @@ import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import { useAdminData } from "@/contexts/admin-data-context";
 import { getProfileDisplayName } from "@/lib/profile-utils";
-import { getProspectCountryBadge } from "@/lib/prospect-country";
+import {
+  COUNTRY_FILTERS,
+  countByCountry,
+  getProspectCountryBadge,
+  matchesCountryFilter,
+  type CountryFilterKey,
+} from "@/lib/prospect-country";
 import { getStatutBadgeClass } from "@/lib/prospect-utils";
 import { cn } from "@/lib/utils";
 
@@ -18,17 +24,27 @@ const BACK_FROM = "/admin/leads";
 export function AdminLeadsView() {
   const { prospects, prospecteurs } = useAdminData();
   const [query, setQuery] = useState("");
+  const [countryFilter, setCountryFilter] = useState<CountryFilterKey>("all");
 
   const prospecteurById = useMemo(
     () => Object.fromEntries(prospecteurs.map((profile) => [profile.id, profile])),
     [prospecteurs]
   );
 
+  const countryCounts = useMemo(
+    () => ({
+      ch: countByCountry(prospects, "CH"),
+      fr: countByCountry(prospects, "FR"),
+    }),
+    [prospects]
+  );
+
   const filtered = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
-    if (!normalizedQuery) return prospects;
 
     return prospects.filter((prospect) => {
+      if (!matchesCountryFilter(prospect.pays, countryFilter)) return false;
+      if (!normalizedQuery) return true;
       const prospecteur = prospect.assigned_to
         ? prospecteurById[prospect.assigned_to]
         : null;
@@ -48,7 +64,7 @@ export function AdminLeadsView() {
 
       return haystack.includes(normalizedQuery);
     });
-  }, [prospects, prospecteurById, query]);
+  }, [prospects, prospecteurById, query, countryFilter]);
 
   return (
     <div className="flex flex-col gap-10">
@@ -72,15 +88,44 @@ export function AdminLeadsView() {
 
       <AdminDataGate skeletonRows={4}>
         <div className="space-y-4">
-          <div className="relative max-w-md">
-            <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-            <input
-              type="search"
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="Rechercher entreprise, contact, email…"
-              className="h-11 w-full rounded-xl border border-border/70 bg-white/70 pl-10 pr-4 text-sm outline-none transition focus:border-amber-500/50 focus:ring-2 focus:ring-amber-500/15"
-            />
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+            <div className="relative max-w-md flex-1">
+              <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+              <input
+                type="search"
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="Rechercher entreprise, contact, email…"
+                className="h-11 w-full rounded-xl border border-border/70 bg-white/70 pl-10 pr-4 text-sm outline-none transition focus:border-amber-500/50 focus:ring-2 focus:ring-amber-500/15"
+              />
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              {COUNTRY_FILTERS.map((item) => {
+                const count =
+                  item.key === "CH"
+                    ? countryCounts.ch
+                    : item.key === "FR"
+                      ? countryCounts.fr
+                      : prospects.length;
+
+                return (
+                  <button
+                    key={item.key}
+                    type="button"
+                    onClick={() => setCountryFilter(item.key)}
+                    className={cn(
+                      "rounded-full px-3 py-2 text-xs font-semibold transition-colors",
+                      countryFilter === item.key
+                        ? "bg-amber-600 text-white"
+                        : "border border-border/70 bg-white/70 text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    {item.label} ({count})
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
           <div className="overflow-hidden rounded-2xl border border-border/60 bg-white/50">
