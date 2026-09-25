@@ -15,6 +15,7 @@ import {
 
 import { ProspectScoreBadge, ProspectScoreRing } from "@/components/prospect-score-ring";
 import { Badge } from "@/components/ui/badge";
+import { getProspectCountryBadge } from "@/lib/prospect-country";
 import { getFullName, getStatutBadgeClass } from "@/lib/prospect-utils";
 import { getRdvBadgeClass, RDV_STATUS_LABELS } from "@/lib/rdv-utils";
 import { cn } from "@/lib/utils";
@@ -23,6 +24,7 @@ import type { RdvStatus } from "@/types/database.types";
 
 type ProspectDetailHeroProps = {
   prospect: ProspectDetailCore;
+  pays: string | null;
   statut: string;
   rdvStatus: RdvStatus;
   backHref?: string;
@@ -48,6 +50,7 @@ function formatDate(iso: string) {
 
 export function ProspectDetailHero({
   prospect,
+  pays,
   statut,
   rdvStatus,
   backHref = "/",
@@ -121,6 +124,11 @@ export function ProspectDetailHero({
                 ) : null}
                 {prospect.ia_score !== null ? (
                   <ProspectScoreBadge score={prospect.ia_score} />
+                ) : null}
+                {pays ? (
+                  <Badge variant="outline" className="rounded-full px-3 py-0.5 text-[10px] font-semibold">
+                    {getProspectCountryBadge(pays)}
+                  </Badge>
                 ) : null}
               </div>
               <h1 className="text-[clamp(2rem,5vw,3.5rem)] font-black leading-[0.95] tracking-[-0.03em] text-foreground">

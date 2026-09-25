@@ -6,6 +6,7 @@ import { Copy, ExternalLink, Link2, Mail, Phone, Send } from "lucide-react";
 import { ProspectCallActions, type ProspectCallPatch } from "@/components/prospect-call-actions";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { ProspectScoreRing } from "@/components/prospect-score-ring";
+import { getProspectCountryBadge } from "@/lib/prospect-country";
 import { getFullName, getStatutBadgeClass } from "@/lib/prospect-utils";
 import { cn } from "@/lib/utils";
 import type { ProspectDetailCore } from "@/types/prospect";
@@ -13,6 +14,7 @@ import type { RdvRejectionReason, RdvStatus } from "@/types/database.types";
 
 type ProspectDetailSidebarProps = {
   prospect: ProspectDetailCore;
+  pays: string | null;
   statut: string;
   rdvStatus: RdvStatus;
   rdvRejectionReason: RdvRejectionReason | null;
@@ -24,6 +26,7 @@ type ProspectDetailSidebarProps = {
 
 export function ProspectDetailSidebar({
   prospect,
+  pays,
   statut,
   rdvStatus,
   rdvRejectionReason,
@@ -62,6 +65,7 @@ export function ProspectDetailSidebar({
             prospectId={prospect.id}
             entreprise={prospect.entreprise}
             profileId={profileId}
+            pays={pays}
             rdvStatus={rdvStatus}
             rdvRejectionReason={rdvRejectionReason}
             layout="sidebar"
@@ -113,6 +117,7 @@ export function ProspectDetailSidebar({
           {prospect.telephone ? (
             <SummaryItem label="Téléphone" value={prospect.telephone} icon={Phone} />
           ) : null}
+          <SummaryItem label="Pays" value={getProspectCountryBadge(pays)} />
           <SummaryItem
             label="Statut"
             value={statut}

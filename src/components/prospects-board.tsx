@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { Search, SlidersHorizontal } from "lucide-react";
 
 import { ProspectCard } from "@/components/prospect-card";
+import { getProspectCountryLabel } from "@/lib/prospect-country";
 import { cn } from "@/lib/utils";
 import type { ProspectListItem } from "@/types/prospect";
 
@@ -56,6 +57,7 @@ export function ProspectsBoard({
         prospect.nom,
         prospect.email,
         prospect.telephone,
+        getProspectCountryLabel(prospect.pays),
         prospect.poste,
         prospect.statut,
       ]

@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import { useAdminData } from "@/contexts/admin-data-context";
 import { getProfileDisplayName } from "@/lib/profile-utils";
+import { getProspectCountryBadge } from "@/lib/prospect-country";
 import { getStatutBadgeClass } from "@/lib/prospect-utils";
 import { cn } from "@/lib/utils";
 
@@ -37,6 +38,7 @@ export function AdminLeadsView() {
         prospect.nom,
         prospect.email,
         prospect.telephone,
+        getProspectCountryBadge(prospect.pays),
         prospect.statut,
         prospecteur ? getProfileDisplayName(prospecteur) : "orphelin",
       ]
@@ -89,6 +91,7 @@ export function AdminLeadsView() {
                     <th className="px-4 py-3">Entreprise</th>
                     <th className="px-4 py-3">Email</th>
                     <th className="px-4 py-3">Téléphone</th>
+                    <th className="px-4 py-3">Pays</th>
                     <th className="px-4 py-3">Score</th>
                     <th className="px-4 py-3">Statut</th>
                     <th className="px-4 py-3">Prospecteur</th>
@@ -98,7 +101,7 @@ export function AdminLeadsView() {
                 <tbody>
                   {filtered.length === 0 ? (
                     <tr>
-                      <td colSpan={7} className="px-4 py-10 text-center text-muted-foreground">
+                      <td colSpan={8} className="px-4 py-10 text-center text-muted-foreground">
                         Aucun lead ne correspond à votre recherche.
                       </td>
                     </tr>
@@ -124,6 +127,9 @@ export function AdminLeadsView() {
                           <td className="px-4 py-3 text-muted-foreground">{prospect.email}</td>
                           <td className="px-4 py-3 text-muted-foreground">
                             {prospect.telephone ?? "—"}
+                          </td>
+                          <td className="px-4 py-3 text-muted-foreground">
+                            {getProspectCountryBadge(prospect.pays)}
                           </td>
                           <td className="px-4 py-3">
                             {prospect.ia_score !== null ? (

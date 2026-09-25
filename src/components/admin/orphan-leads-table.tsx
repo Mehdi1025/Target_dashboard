@@ -10,6 +10,7 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { useAdminData } from "@/contexts/admin-data-context";
 import { useToast } from "@/hooks/use-toast";
 import { buildProspectHref } from "@/lib/admin-navigation";
+import { getProspectCountryBadge } from "@/lib/prospect-country";
 import { getProfileDisplayName } from "@/lib/profile-utils";
 import { cn } from "@/lib/utils";
 
@@ -85,6 +86,7 @@ export function OrphanLeadsTable() {
               <th className="px-4 py-3">Entreprise</th>
               <th className="px-4 py-3">Email</th>
               <th className="px-4 py-3">Téléphone</th>
+              <th className="px-4 py-3">Pays</th>
               <th className="px-4 py-3">Score</th>
               <th className="px-4 py-3">Statut</th>
               <th className="px-4 py-3">Assigner à</th>
@@ -113,6 +115,9 @@ export function OrphanLeadsTable() {
                   <td className="px-4 py-3 text-muted-foreground">{orphan.email}</td>
                   <td className="px-4 py-3 text-muted-foreground">
                     {orphan.telephone ?? "—"}
+                  </td>
+                  <td className="px-4 py-3 text-muted-foreground">
+                    {getProspectCountryBadge(orphan.pays)}
                   </td>
                   <td className="px-4 py-3">
                     {orphan.ia_score !== null ? (
