@@ -29,6 +29,7 @@ type AdminDataContextValue = AdminSharedData & {
   bumpRefreshKey: () => void;
   refreshSharedData: (options?: { silent?: boolean }) => Promise<void>;
   markOrphanAssigned: (prospectId: string, prospecteurId: string) => void;
+  markOrphansAssignedBulk: (prospectIds: string[], prospecteurId: string) => void;
 };
 
 const AdminDataContext = createContext<AdminDataContextValue | null>(null);
@@ -84,6 +85,22 @@ export function AdminDataProvider({ children }: { children: ReactNode }) {
     setRefreshKey((value) => value + 1);
   }, []);
 
+  const markOrphansAssignedBulk = useCallback(
+    (prospectIds: string[], prospecteurId: string) => {
+      const idSet = new Set(prospectIds);
+      setOrphans((current) => current.filter((orphan) => !idSet.has(orphan.id)));
+      setProspects((current) =>
+        current.map((prospect) =>
+          idSet.has(prospect.id)
+            ? { ...prospect, assigned_to: prospecteurId }
+            : prospect
+        )
+      );
+      setRefreshKey((value) => value + 1);
+    },
+    []
+  );
+
   useEffect(() => {
     void refreshSharedData();
   }, [refreshSharedData]);
@@ -100,6 +117,7 @@ export function AdminDataProvider({ children }: { children: ReactNode }) {
       bumpRefreshKey: () => setRefreshKey((value) => value + 1),
       refreshSharedData,
       markOrphanAssigned,
+      markOrphansAssignedBulk,
     }),
     [
       prospects,
@@ -110,6 +128,7 @@ export function AdminDataProvider({ children }: { children: ReactNode }) {
       refreshKey,
       refreshSharedData,
       markOrphanAssigned,
+      markOrphansAssignedBulk,
     ]
   );
 
