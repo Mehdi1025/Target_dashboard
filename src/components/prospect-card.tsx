@@ -92,7 +92,6 @@ export function ProspectCard({
   onProspectPatch,
 }: ProspectCardProps) {
   const [statut, setStatut] = useState(prospect.statut);
-  const [pays, setPays] = useState(prospect.pays);
   const [rdvStatus, setRdvStatus] = useState<RdvStatus>(prospect.rdv_status ?? "NONE");
   const [rdvRejectionReason, setRdvRejectionReason] = useState<RdvRejectionReason | null>(
     prospect.rdv_rejection_reason ?? null
@@ -113,16 +112,9 @@ export function ProspectCard({
     setStatut(prospect.statut);
   }, [prospect.statut]);
 
-  useEffect(() => {
-    setPays(prospect.pays);
-  }, [prospect.pays]);
-
   function handleCallPatch(patch: ProspectCallPatch) {
     if (patch.statut) {
       setStatut(patch.statut);
-    }
-    if (patch.pays) {
-      setPays(patch.pays);
     }
     if (patch.rdv_status) {
       setRdvStatus(patch.rdv_status);
@@ -233,9 +225,9 @@ export function ProspectCard({
               Priorité
             </span>
           ) : null}
-          {pays ? (
+          {prospect.pays ? (
             <Badge variant="outline" className="rounded-full px-2.5 py-0.5 text-[10px] font-semibold">
-              {getProspectCountryBadge(pays)}
+              {getProspectCountryBadge(prospect.pays)}
             </Badge>
           ) : null}
         </div>
@@ -247,7 +239,6 @@ export function ProspectCard({
                 prospectId={prospect.id}
                 entreprise={prospect.entreprise}
                 profileId={profileId}
-                pays={pays}
                 rdvStatus={rdvStatus}
                 rdvRejectionReason={rdvRejectionReason}
                 layout="inline"

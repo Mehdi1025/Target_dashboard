@@ -39,7 +39,6 @@ export function ProspectDetailView({
   const [copied, setCopied] = useState(false);
   const [activeTab, setActiveTab] = useState("overview");
   const [statut, setStatut] = useState(prospect.statut);
-  const [pays, setPays] = useState(prospect.pays);
   const [rdvStatus, setRdvStatus] = useState<RdvStatus>(prospect.rdv_status ?? "NONE");
   const [rdvRejectionReason, setRdvRejectionReason] = useState<RdvRejectionReason | null>(
     prospect.rdv_rejection_reason ?? null
@@ -49,10 +48,6 @@ export function ProspectDetailView({
   useEffect(() => {
     setStatut(prospect.statut);
   }, [prospect.statut]);
-
-  useEffect(() => {
-    setPays(prospect.pays);
-  }, [prospect.pays]);
 
   useEffect(() => {
     setRdvStatus(prospect.rdv_status ?? "NONE");
@@ -65,9 +60,6 @@ export function ProspectDetailView({
   function handleCallPatch(patch: ProspectCallPatch) {
     if (patch.statut) {
       setStatut(patch.statut);
-    }
-    if (patch.pays) {
-      setPays(patch.pays);
     }
     if (patch.rdv_status) {
       setRdvStatus(patch.rdv_status);
@@ -111,7 +103,7 @@ export function ProspectDetailView({
     <div className="mx-auto flex max-w-[1400px] flex-col gap-8 lg:gap-12">
         <ProspectDetailHero
           prospect={prospect}
-          pays={pays}
+          pays={prospect.pays}
           statut={statut}
           rdvStatus={rdvStatus}
           backHref={backHref}
@@ -224,7 +216,6 @@ export function ProspectDetailView({
 
           <ProspectDetailSidebar
             prospect={prospect}
-            pays={pays}
             statut={statut}
             rdvStatus={rdvStatus}
             rdvRejectionReason={rdvRejectionReason}

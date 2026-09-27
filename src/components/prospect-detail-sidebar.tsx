@@ -14,7 +14,6 @@ import type { RdvRejectionReason, RdvStatus } from "@/types/database.types";
 
 type ProspectDetailSidebarProps = {
   prospect: ProspectDetailCore;
-  pays: string | null;
   statut: string;
   rdvStatus: RdvStatus;
   rdvRejectionReason: RdvRejectionReason | null;
@@ -26,7 +25,6 @@ type ProspectDetailSidebarProps = {
 
 export function ProspectDetailSidebar({
   prospect,
-  pays,
   statut,
   rdvStatus,
   rdvRejectionReason,
@@ -65,7 +63,6 @@ export function ProspectDetailSidebar({
             prospectId={prospect.id}
             entreprise={prospect.entreprise}
             profileId={profileId}
-            pays={pays}
             rdvStatus={rdvStatus}
             rdvRejectionReason={rdvRejectionReason}
             layout="sidebar"
@@ -117,7 +114,7 @@ export function ProspectDetailSidebar({
           {prospect.telephone ? (
             <SummaryItem label="Téléphone" value={prospect.telephone} icon={Phone} />
           ) : null}
-          <SummaryItem label="Pays" value={getProspectCountryBadge(pays)} />
+          <SummaryItem label="Pays" value={getProspectCountryBadge(prospect.pays)} />
           <SummaryItem
             label="Statut"
             value={statut}

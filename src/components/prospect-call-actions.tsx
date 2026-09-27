@@ -25,9 +25,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ProspectCountrySelect } from "@/components/prospect-country-select";
 import { useToast } from "@/hooks/use-toast";
-import { isProspectCountry, type ProspectCountry } from "@/lib/prospect-country";
 import { getRdvRejectionReasonLabel } from "@/lib/rdv-rejection-reasons";
 import {
   EXTERNAL_RDV_DECLARE_PATCH,
@@ -58,7 +56,6 @@ const DISPOSITION_TOAST: Record<
 
 export type ProspectCallPatch = {
   statut?: string;
-  pays?: ProspectCountry;
   rdv_status?: RdvStatus;
   rdv_date?: string | null;
   rdv_rejection_reason?: RdvRejectionReason | null;
@@ -68,7 +65,6 @@ type ProspectCallActionsProps = {
   prospectId: string;
   entreprise: string;
   profileId?: string;
-  pays: string | null;
   rdvStatus: RdvStatus;
   rdvRejectionReason?: RdvRejectionReason | null;
   layout?: "inline" | "sidebar";
@@ -79,13 +75,11 @@ export function ProspectCallActions({
   prospectId,
   entreprise,
   profileId,
-  pays,
   rdvStatus,
   rdvRejectionReason = null,
   layout = "inline",
   onPatch,
 }: ProspectCallActionsProps) {
-  const [localPays, setLocalPays] = useState<string | null>(pays);
   const [localRdvStatus, setLocalRdvStatus] = useState<RdvStatus>(rdvStatus);
   const [localRejectionReason, setLocalRejectionReason] = useState<RdvRejectionReason | null>(
     rdvRejectionReason
@@ -98,25 +92,8 @@ export function ProspectCallActions({
 
   const canDeclareRdv = canDeclareRdvFromStatus(localRdvStatus);
   const showCallQualification = localRdvStatus === "NONE" && Boolean(profileId);
-  const hasCountry = localPays !== null && isProspectCountry(localPays);
   const isCallBusy = isUpdatingDisposition || isReservingRdv;
   const isSidebar = layout === "sidebar";
-
-  function requireCountry(actionLabel: string): boolean {
-    if (hasCountry) return true;
-
-    setActionError("Sélectionnez le pays du lead avant de continuer.");
-    toast({
-      variant: "error",
-      title: "Pays requis",
-      description: `Choisissez Suisse ou France avant ${actionLabel}.`,
-    });
-    return false;
-  }
-
-  useEffect(() => {
-    setLocalPays(pays);
-  }, [pays]);
 
   useEffect(() => {
     setLocalRdvStatus(rdvStatus);
@@ -128,7 +105,6 @@ export function ProspectCallActions({
 
   async function handleReserveRdv() {
     if (!canDeclareRdv || isCallBusy) return;
-    if (!requireCountry("de réserver un RDV")) return;
 
     setIsReservingRdv(true);
     setActionError(null);
@@ -200,7 +176,6 @@ export function ProspectCallActions({
 
   async function handleCallDisposition(disposition: CallDisposition) {
     if (!profileId || isUpdatingDisposition) return;
-    if (!requireCountry("de qualifier l'appel")) return;
 
     setIsUpdatingDisposition(true);
     setActionError(null);
@@ -244,21 +219,6 @@ export function ProspectCallActions({
 
   return (
     <div className={cn("space-y-2", (isSidebar || hasStatusBanner) && "w-full")}>
-      {profileId ? (
-        <ProspectCountrySelect
-          prospectId={prospectId}
-          entreprise={entreprise}
-          pays={localPays}
-          editable
-          layout={layout}
-          onChange={(nextPays) => {
-            setLocalPays(nextPays);
-            setActionError(null);
-            onPatch?.({ pays: nextPays });
-          }}
-        />
-      ) : null}
-
       {localRdvStatus === "PENDING" ? (
         <div
           className={cn(
@@ -305,7 +265,7 @@ export function ProspectCallActions({
       {showCallQualification ? (
         <DropdownMenu>
           <DropdownMenuTrigger
-            disabled={isCallBusy || !hasCountry}
+            disabled={isCallBusy}
             className={cn(
               buttonVariants({ variant: "default", size: "sm" }),
               "gap-1.5 shadow-sm shadow-primary/20",
